@@ -1,0 +1,118 @@
+canisters:
+  - name: auth
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: calendar
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: games
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: tasks
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: chat
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: tree
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: dms
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: groups
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: votes
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: albums
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: spins
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: hatgame
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: secretsanta
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: chess
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: rps
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: strawdraw
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: recipes
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: profiles
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: wallet
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: sudoku
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: poker
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: shop
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: marketplace
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: tetris
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: wall
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: scrabble
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
+  - name: frontend
+    recipe:
+      type: "@dfinity/asset-canister@v2.2.1"
+      configuration:
+        dir: src/frontend/dist
+        build:
+          - npm install --prefix src/frontend
+          - npm run build --prefix src/frontend
+
+networks:
+  - name: local
+    mode: managed
+    ii: true

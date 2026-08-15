@@ -1,0 +1,83 @@
+[toolchain]
+moc = "1.9.0"
+
+[dependencies]
+core = "2.1.0"
+
+[canisters.auth]
+main = "src/auth/main.mo"
+
+[canisters.calendar]
+main = "src/calendar/main.mo"
+
+[canisters.games]
+main = "src/games/main.mo"
+
+[canisters.tasks]
+main = "src/tasks/main.mo"
+
+[canisters.chat]
+main = "src/chat/main.mo"
+
+[canisters.tree]
+main = "src/tree/main.mo"
+
+[canisters.dms]
+main = "src/dms/main.mo"
+
+[canisters.groups]
+main = "src/groups/main.mo"
+
+[canisters.votes]
+main = "src/votes/main.mo"
+
+[canisters.albums]
+main = "src/albums/main.mo"
+
+[canisters.spins]
+main = "src/spins/main.mo"
+
+[canisters.hatgame]
+main = "src/hatgame/main.mo"
+
+[canisters.secretsanta]
+main = "src/secretsanta/main.mo"
+
+[canisters.chess]
+main = "src/chess/main.mo"
+
+[canisters.rps]
+main = "src/rps/main.mo"
+
+[canisters.strawdraw]
+main = "src/strawdraw/main.mo"
+
+[canisters.recipes]
+main = "src/recipes/main.mo"
+
+[canisters.profiles]
+main = "src/profiles/main.mo"
+
+[canisters.wallet]
+main = "src/wallet/main.mo"
+
+[canisters.sudoku]
+main = "src/sudoku/main.mo"
+
+[canisters.poker]
+main = "src/poker/main.mo"
+
+[canisters.shop]
+main = "src/shop/main.mo"
+
+[canisters.marketplace]
+main = "src/marketplace/main.mo"
+
+[canisters.tetris]
+main = "src/tetris/main.mo"
+
+[canisters.wall]
+main = "src/wall/main.mo"
+
+[canisters.scrabble]
+main = "src/scrabble/main.mo"
