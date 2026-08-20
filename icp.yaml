@@ -116,3 +116,5 @@ networks:
   - name: local
     mode: managed
     ii: true
+    gateway:
+      port: 8001
