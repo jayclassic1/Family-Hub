@@ -78,7 +78,7 @@ export default function SecretSanta() {
       const result = await santaActor.listExchanges();
       setExchanges(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [santaActor]);
 
@@ -144,7 +144,7 @@ export default function SecretSanta() {
       );
       navigate("/games/secret-santa/" + id.toString());
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setCreating(false);
     }

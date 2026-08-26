@@ -32,7 +32,7 @@ export default function Admin() {
       setStatuses(list);
       setCurrentPassword(pw.length > 0 ? pw[0] : null);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [authActor]);
 
@@ -59,7 +59,7 @@ export default function Admin() {
         setError("Could not update password.");
       }
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -70,7 +70,7 @@ export default function Admin() {
       const ok = await authActor.adminBan(user);
       if (ok) { flash("User banned."); await refresh(); }
       else setError("Could not ban that user.");
-    } catch (e) { setError(String(e)); }
+    } catch (e) { setError("Something went wrong. Please try again."); }
   };
 
   const handleUnban = async (user) => {
@@ -80,7 +80,7 @@ export default function Admin() {
       const ok = await authActor.adminUnban(user);
       if (ok) { flash("User unbanned."); await refresh(); }
       else setError("Could not unban that user.");
-    } catch (e) { setError(String(e)); }
+    } catch (e) { setError("Something went wrong. Please try again."); }
   };
 
   const handleBlock = async (user) => {
@@ -95,7 +95,7 @@ export default function Admin() {
       const ok = await authActor.adminBlock(user, hours);
       if (ok) { flash("User blocked for " + hours + " hour(s)."); await refresh(); }
       else setError("Could not block that user.");
-    } catch (e) { setError(String(e)); }
+    } catch (e) { setError("Something went wrong. Please try again."); }
   };
 
   const handleUnblock = async (user) => {
@@ -105,7 +105,7 @@ export default function Admin() {
       const ok = await authActor.adminUnblock(user);
       if (ok) { flash("Block lifted."); await refresh(); }
       else setError("Could not unblock that user.");
-    } catch (e) { setError(String(e)); }
+    } catch (e) { setError("Something went wrong. Please try again."); }
   };
 
   const handleDeleteUser = async (user, username) => {
@@ -116,7 +116,7 @@ export default function Admin() {
       const ok = await authActor.adminDeleteUser(user);
       if (ok) { flash("Account deleted."); await refresh(); }
       else setError("Could not delete that account.");
-    } catch (e) { setError(String(e)); }
+    } catch (e) { setError("Something went wrong. Please try again."); }
   };
 
   if (!isAdmin) {

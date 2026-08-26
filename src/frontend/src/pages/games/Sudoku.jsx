@@ -54,7 +54,7 @@ export default function Sudoku() {
       setAlreadyWon(won);
       setMyWins(wins);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [sudokuActor, difficulty]);
 
@@ -95,7 +95,7 @@ export default function Sudoku() {
           setMyWins(wins);
         }
       } catch (e2) {
-        setError(String(e2));
+        setError("Something went wrong. Please try again.");
       }
     }
   };

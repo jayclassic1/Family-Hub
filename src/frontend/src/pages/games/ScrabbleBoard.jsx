@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { createScrabbleActor } from "../../scrabble.js";
@@ -17,6 +17,23 @@ function playTileClick() {
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.06);
+  } catch (e) {}
+}
+
+function playChatDing() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 1200;
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.25);
   } catch (e) {}
 }
 
@@ -144,15 +161,53 @@ export default function ScrabbleBoard() {
   const [justMovedIndex, setJustMovedIndex] = useState(null);
   const [exchangeMode, setExchangeMode] = useState(false);
   const [exchangeSelected, setExchangeSelected] = useState(new Set());
+  const [disputePopup, setDisputePopup] = useState(null);
+  const seenResolvedDisputes = useRef(new Set());
+  const isFirstLoadRef = useRef(true);
+  const [turnChangePopup, setTurnChangePopup] = useState(null);
+  const prevTurnPlayerRef = useRef(null);
+  const chatContainerRef = useRef(null);
+  const prevChatLengthRef = useRef(-1);
 
   const refresh = useCallback(async () => {
     if (!identity || !gameId) return;
     try {
       const actor = await createScrabbleActor(identity);
       const result = await actor.getGame(Number(gameId));
-      setGame(result.length > 0 ? result[0] : null);
+      const g = result.length > 0 ? result[0] : null;
+      if (g) {
+        const curTurnId = g.currentTurnPlayer.length > 0 ? g.currentTurnPlayer[0].toString() : null;
+        if (isFirstLoadRef.current) {
+          g.disputes.forEach((d) => {
+            if (d.resolved) seenResolvedDisputes.current.add(d.turnId.toString());
+          });
+          prevTurnPlayerRef.current = curTurnId;
+          isFirstLoadRef.current = false;
+        } else {
+          if (curTurnId !== null && curTurnId !== prevTurnPlayerRef.current) {
+            const tp = g.players.find((p) => p.id.toString() === curTurnId);
+            if (tp) {
+              setTurnChangePopup(tp.name);
+              setTimeout(() => setTurnChangePopup(null), 3000);
+            }
+          }
+          prevTurnPlayerRef.current = curTurnId;
+          g.disputes.forEach((d) => {
+            const key = d.turnId.toString();
+            if (d.resolved && !seenResolvedDisputes.current.has(key)) {
+              seenResolvedDisputes.current.add(key);
+              const t = g.turns.find((tt) => tt.id === d.turnId);
+              setDisputePopup({ turnId: d.turnId, upheld: t ? t.upheld : d.outcome, coinFlipped: d.coinFlipped });
+              setTimeout(() => {
+                setDisputePopup((cur) => (cur && cur.turnId === d.turnId ? null : cur));
+              }, 4000);
+            }
+          });
+        }
+      }
+      setGame(g);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [identity, gameId]);
 
@@ -161,6 +216,19 @@ export default function ScrabbleBoard() {
     const interval = setInterval(refresh, 3000);
     return () => clearInterval(interval);
   }, [refresh]);
+
+  useEffect(() => {
+    if (!game) return;
+    const len = game.chat.length;
+    const isFirst = prevChatLengthRef.current === -1;
+    if (!isFirst && len > prevChatLengthRef.current) {
+      playChatDing();
+    }
+    prevChatLengthRef.current = len;
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [game ? game.chat.length : 0]);
 
   const myPlayer = useMemo(() => {
     if (!game || !profile) return null;
@@ -277,7 +345,7 @@ export default function ScrabbleBoard() {
   };
 
   const handleDrop = (row, col) => {
-    if (dragRackIndex === null) return;
+    if (!isMyTurn || dragRackIndex === null) return;
     placeAt(row, col, dragRackIndex);
     setDragRackIndex(null);
   };
@@ -400,6 +468,20 @@ export default function ScrabbleBoard() {
 
   return (
     <div className="scrabble-page">
+      {disputePopup && (
+        <div className="scrabble-dispute-popup">
+          <strong>Dispute Resolved</strong>
+          <p>
+            {disputePopup.upheld ? "Turn upheld" : "Turn overturned"}
+            {disputePopup.coinFlipped ? " \u2014 decided by coin flip! 🪙" : ""}
+          </p>
+        </div>
+      )}
+      {turnChangePopup && (
+        <div className="scrabble-turn-popup">
+          It\u2019s <strong>{turnChangePopup}</strong>\u2019s turn!
+        </div>
+      )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
         <Link to="/games/scrabble" className="tree-rel" style={{ display: "inline-block", textDecoration: "none" }}>
           &larr; Back to Scrabble games
@@ -419,6 +501,7 @@ export default function ScrabbleBoard() {
       </div>
       <h1 className="page-title" style={{ marginTop: 10 }}>{game.name}</h1>
       <p className="page-subtitle">{statusLabel(game.status)}</p>
+      <p className="tree-rel" style={{ fontSize: 13 }}>(No Auto-Dictionary, Honour System only)</p>
 
       <div className="scrabble-scoreboard">
         {game.players.map((p) => {
@@ -502,9 +585,10 @@ export default function ScrabbleBoard() {
                       (selectedRackIndex === idx ? " scrabble-tile-selected" : "") +
                       (dragRackIndex === idx ? " scrabble-tile-dragging" : "") +
                       (justMovedIndex === idx ? " scrabble-tile-bounce" : "") +
-                      (exchangeSelected.has(idx) ? " scrabble-tile-exchange-selected" : "")
+                      (exchangeSelected.has(idx) ? " scrabble-tile-exchange-selected" : "") +
+                      (isMyTurn ? " scrabble-tile-glow" : "")
                     }
-                    draggable={isMyTurn && !exchangeMode}
+                    draggable={!exchangeMode}
                     onDragStart={() => setDragRackIndex(idx)}
                     onDragEnd={() => setDragRackIndex(null)}
                     onDragOver={(e) => e.preventDefault()}
@@ -572,11 +656,13 @@ export default function ScrabbleBoard() {
           {[...game.turns].reverse().map((t) => {
             const dispute = game.disputes.find((d) => d.turnId === t.id);
             const myVote = dispute && profile ? dispute.votes.find((v) => v[0].toString() === profile.id.toString()) : null;
-            const canDispute = !t.passed && !t.disputed && profile;
+            const isLastTurn = game.turns.length > 0 && t.id === game.turns[game.turns.length - 1].id;
+            const canDispute = !t.passed && !t.disputed && profile && isLastTurn;
             return (
               <div key={t.id.toString()} className="scrabble-turn-row">
                 <div>
                   <strong>{t.playerName}</strong>{" "}
+                  {t.word ? "played \"" + t.word + "\" and " : ""}
                   {t.passed ? "passed" : "scored " + t.score.toString() + " points"}
                   {t.disputed && !t.resolved && <span className="scrabble-dispute-tag"> &mdash; disputed, vote open</span>}
                   {t.disputed && t.resolved && (
@@ -611,7 +697,7 @@ export default function ScrabbleBoard() {
 
       <div className="scrabble-panel" style={{ marginTop: 20 }}>
         <h2 className="tree-admin-title">Table Chat</h2>
-        <div className="scrabble-chat-messages">
+        <div className="scrabble-chat-messages" ref={chatContainerRef}>
           {game.chat.length === 0 ? (
             <p className="chat-empty">No messages yet.</p>
           ) : (

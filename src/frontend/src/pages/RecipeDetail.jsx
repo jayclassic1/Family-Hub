@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { createRecipesActor, starDisplay } from "../recipesApi.js";
@@ -45,7 +45,7 @@ export default function RecipeDetail() {
       setSummary(s.length > 0 ? s[0] : null);
       setComments(cm);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [recipesActor, numericRecipeId]);
 
@@ -61,7 +61,7 @@ export default function RecipeDetail() {
       await recipesActor.deleteRecipe(numericRecipeId);
       navigate("/recipes");
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -72,7 +72,7 @@ export default function RecipeDetail() {
       await recipesActor.deleteComment(commentId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -84,7 +84,7 @@ export default function RecipeDetail() {
       if (!ok) setError("Could not send Love (maybe you don't have any, or already sent it here).");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -96,7 +96,7 @@ export default function RecipeDetail() {
       if (!ok) setError("Could not send Love (maybe you don't have any, or already sent it here).");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -107,13 +107,17 @@ export default function RecipeDetail() {
       await recipesActor.reactToComment(commentId, isThumbsUp);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
+
+  const commentingRef = useRef(false);
 
   const handleComment = async (e) => {
     e.preventDefault();
     if (!recipesActor || !commentText.trim()) return;
+    if (commentingRef.current) return;
+    commentingRef.current = true;
     setError(null);
     try {
       const ratingArg = rating > 0 ? [rating] : [];
@@ -122,7 +126,9 @@ export default function RecipeDetail() {
       setRating(0);
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
+    } finally {
+      commentingRef.current = false;
     }
   };
 
@@ -259,11 +265,18 @@ export default function RecipeDetail() {
           {rating > 0 && <span className="tree-rel" style={{ marginLeft: 6 }}>Rating: {rating}/5</span>}
         </div>
         <div className="chat-input-row">
-          <input
+          <textarea
             className="chat-text-input"
+            rows={1}
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             placeholder="Add a comment (and optional rating above)..."
+            onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleComment(e);
+            }
+          }}
           />
           <button className="chat-send-button" type="submit">Post</button>
         </div>

@@ -34,7 +34,7 @@ export default function ChessLobby() {
       const result = await chessActor.listAllGames();
       setAllGames(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [chessActor]);
 
@@ -53,7 +53,7 @@ export default function ChessLobby() {
       const id = await chessActor.createOpenGame(wager);
       navigate("/games/chess/" + id.toString());
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setCreating(false);
     }
@@ -79,7 +79,7 @@ export default function ChessLobby() {
       } catch (dmErr) {}
       navigate("/games/chess/" + id.toString());
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setCreating(false);
     }
@@ -98,7 +98,7 @@ export default function ChessLobby() {
         await refresh();
       }
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setJoiningId(null);
     }
@@ -111,7 +111,7 @@ export default function ChessLobby() {
       await chessActor.cancelOpenGame(gameId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 

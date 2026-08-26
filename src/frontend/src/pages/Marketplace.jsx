@@ -56,7 +56,7 @@ export default function Marketplace() {
       const result = await marketplaceActor.listListings();
       setListings(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [marketplaceActor]);
 
@@ -111,7 +111,7 @@ export default function Marketplace() {
       setPendingFiles([]);
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setCreating(false);
     }

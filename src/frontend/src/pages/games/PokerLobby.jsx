@@ -41,7 +41,7 @@ export default function PokerLobby() {
       const result = await pokerActor.listTables();
       setTables(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [pokerActor]);
 
@@ -64,7 +64,7 @@ export default function PokerLobby() {
       const id = await pokerActor.createTable(name.trim(), maxSeats);
       navigate("/games/poker/" + id.toString());
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setCreating(false);
     }

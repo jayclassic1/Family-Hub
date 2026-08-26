@@ -30,7 +30,7 @@ export default function Albums() {
       const result = await albumsActor.listAlbums();
       setSummaries(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [albumsActor]);
 
@@ -71,7 +71,7 @@ export default function Albums() {
       setCoverFile(null);
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -85,7 +85,7 @@ export default function Albums() {
       if (!ok) setError("Could not send Love (maybe you don't have any, or already sent it here).");
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 

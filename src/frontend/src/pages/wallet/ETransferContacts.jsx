@@ -25,7 +25,7 @@ export default function ETransferContacts() {
       const result = await walletActor.listContacts();
       setContacts(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [walletActor]);
 
@@ -43,7 +43,7 @@ export default function ETransferContacts() {
       setEmail("");
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -54,7 +54,7 @@ export default function ETransferContacts() {
       await walletActor.removeContact(id);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 

@@ -62,7 +62,7 @@ export default function EventDetail() {
       setPhotos(ph);
       setMyEventLove(loved);
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   }, [eventsActor, numericEventId]);
 
@@ -78,7 +78,7 @@ export default function EventDetail() {
       await eventsActor.deleteEvent(numericEventId);
       navigate("/events");
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -90,7 +90,7 @@ export default function EventDetail() {
       if (!ok) setError("Could not send Love (maybe you don't have any, or already sent it here).");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -102,7 +102,7 @@ export default function EventDetail() {
       if (!ok) setError("Could not send Love (maybe you don't have any, or already sent it here).");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -113,7 +113,7 @@ export default function EventDetail() {
       await eventsActor.reactToEventComment(commentId, isThumbsUp);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -124,7 +124,7 @@ export default function EventDetail() {
       await eventsActor.deleteEventComment(commentId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -135,20 +135,26 @@ export default function EventDetail() {
       await eventsActor.rsvp(numericEventId, { [response]: null });
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
+
+  const commentingRef = useRef(false);
 
   const handleComment = async (e) => {
     e.preventDefault();
     if (!eventsActor || !commentText.trim()) return;
+    if (commentingRef.current) return;
+    commentingRef.current = true;
     setError(null);
     try {
       await eventsActor.addEventComment(numericEventId, commentText.trim());
       setCommentText("");
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
+    } finally {
+      commentingRef.current = false;
     }
   };
 
@@ -173,7 +179,7 @@ export default function EventDetail() {
       if (fileInputRef.current) fileInputRef.current.value = "";
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -345,11 +351,18 @@ export default function EventDetail() {
         ))}
       </div>
       <form className="chat-input-row" onSubmit={handleComment} style={{ marginTop: 10 }}>
-        <input
+        <textarea
           className="chat-text-input"
+          rows={1}
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
           placeholder="Add a comment..."
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleComment(e);
+            }
+          }}
         />
         <button className="chat-send-button" type="submit">Post</button>
       </form>

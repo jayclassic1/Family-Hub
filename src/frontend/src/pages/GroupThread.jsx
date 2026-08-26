@@ -100,7 +100,7 @@ export default function GroupThread() {
       const mems = await groupsActor.getGroupMembers(numericGroupId);
       setMembers(mems);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [groupsActor, numericGroupId]);
 
@@ -173,10 +173,14 @@ export default function GroupThread() {
     return u ? u.username : principalText;
   };
 
+  const sendingRef = useRef(false);
+
   const handleSend = async (e) => {
     e.preventDefault();
     if (!groupsActor) return;
     if (!text.trim() && !file) return;
+    if (sendingRef.current) return;
+    sendingRef.current = true;
 
     setSending(true);
     setError(null);
@@ -192,8 +196,9 @@ export default function GroupThread() {
       if (fileInputRef.current) fileInputRef.current.value = "";
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
@@ -227,7 +232,7 @@ export default function GroupThread() {
         await refresh();
       }
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -325,12 +330,19 @@ export default function GroupThread() {
       </div>
 
       <form className="chat-input-row" onSubmit={handleSend}>
-        <input
+        <textarea
           className="chat-text-input"
+          rows={1}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Type a message..."
           disabled={sending}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend(e);
+            }
+          }}
         />
         <input
           ref={fileInputRef}

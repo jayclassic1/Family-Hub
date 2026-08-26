@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { AuthClient } from "@icp-sdk/auth/client";
-import { createAuthActor, IDENTITY_PROVIDER, THIRTY_DAYS_NS } from "../auth.js";
+import { createAuthActor, IDENTITY_PROVIDER, DERIVATION_ORIGIN, THIRTY_DAYS_NS } from "../auth.js";
+import { deriveIdentityFromPassword, savePasswordSession, loadPasswordSession, clearPasswordSession } from "../passwordAuth.js";
 
 const AuthContext = createContext(null);
 
@@ -31,14 +32,23 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     (async () => {
       try {
-        const client = new AuthClient({ identityProvider: IDENTITY_PROVIDER });
+        const client = new AuthClient({
+          identityProvider: IDENTITY_PROVIDER,
+          derivationOrigin: DERIVATION_ORIGIN,
+          idleOptions: { disableIdle: true },
+        });
         setAuthClient(client);
         if (client.isAuthenticated()) {
           const id = await client.getIdentity();
           await applyIdentity(id);
+        } else {
+          const stored = loadPasswordSession();
+          if (stored) {
+            await applyIdentity(stored);
+          }
         }
       } catch (e) {
-        setError(String(e));
+        setError("Something went wrong. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -52,38 +62,55 @@ export function AuthProvider({ children }) {
       const id = await authClient.signIn({ maxTimeToLive: THIRTY_DAYS_NS });
       await applyIdentity(id);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [authClient, applyIdentity]);
 
   const logout = useCallback(async () => {
-    if (!authClient) return;
-    await authClient.signOut();
+    if (authClient) {
+      await authClient.signOut();
+    }
+    clearPasswordSession();
     setIdentity(null);
     setPrincipal(null);
     setActor(null);
     setProfile(null);
   }, [authClient]);
 
+  const loginWithPassword = useCallback(
+    async (username, password) => {
+      setError(null);
+      try {
+        const id = await deriveIdentityFromPassword(username, password);
+        await applyIdentity(id);
+        savePasswordSession(id);
+        return true;
+      } catch (e) {
+        setError("Something went wrong. Please try again.");
+        return false;
+      }
+    },
+    [applyIdentity]
+  );
+
   const register = useCallback(
     async (username, password) => {
-      if (!actor || !authClient) return false;
+      if (!actor || !identity) return false;
       setError(null);
       try {
         const ok = await actor.register(username, password);
         if (ok) {
-          const id = await authClient.getIdentity();
-          await applyIdentity(id);
+          await applyIdentity(identity);
         } else {
           setError("Registration failed — wrong signup password, or that account may already exist.");
         }
         return ok;
       } catch (e) {
-        setError(String(e));
+        setError("Something went wrong. Please try again.");
         return false;
       }
     },
-    [actor, authClient, applyIdentity]
+    [actor, identity, applyIdentity]
   );
 
   const reloadProfile = useCallback(async () => {
@@ -101,6 +128,7 @@ export function AuthProvider({ children }) {
     isLoggedIn: !!principal,
     needsRegistration: !!principal && !profile,
     login,
+    loginWithPassword,
     logout,
     register,
     reloadProfile,

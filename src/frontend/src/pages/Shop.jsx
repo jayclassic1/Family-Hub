@@ -38,7 +38,7 @@ export default function Shop() {
       setLoveBalance(love);
       setBadgeInput(profile.badgeText || "");
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [shopActor, walletActor]);
 
@@ -55,7 +55,7 @@ export default function Shop() {
       if (!ok) setError("Could not purchase — check your Love balance.");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -68,7 +68,7 @@ export default function Shop() {
       await shopActor.setNameColor(hex);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -79,7 +79,7 @@ export default function Shop() {
       await shopActor.setNameFont(font);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -90,7 +90,7 @@ export default function Shop() {
       await shopActor.setLovedEffect(effect);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -101,7 +101,7 @@ export default function Shop() {
       await shopActor.setSendEffect(effect);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -112,7 +112,7 @@ export default function Shop() {
       await shopActor.setChatBubbleSkin(skin);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -123,7 +123,7 @@ export default function Shop() {
       await shopActor.setProfileTheme(theme);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -135,7 +135,7 @@ export default function Shop() {
       if (!ok) setError("Badge text couldn't be saved — keep it to 16 characters or fewer.");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -156,7 +156,7 @@ export default function Shop() {
       await shopActor.setAvatarPhoto(attachment);
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -177,7 +177,7 @@ export default function Shop() {
       await shopActor.setBannerPhoto(attachment);
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 

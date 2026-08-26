@@ -42,7 +42,7 @@ export default function StrawDraw() {
       const result = await strawActor.listGames();
       setGames(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [strawActor]);
 
@@ -101,7 +101,7 @@ export default function StrawDraw() {
       );
       navigate("/games/straw-draw/" + id.toString());
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setCreating(false);
     }

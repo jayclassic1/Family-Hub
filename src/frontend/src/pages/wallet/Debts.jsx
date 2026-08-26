@@ -27,7 +27,7 @@ export default function Debts() {
       const result = await walletActor.listDebts();
       setDebts(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [walletActor]);
 
@@ -51,7 +51,7 @@ export default function Debts() {
       setAmount("");
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -62,7 +62,7 @@ export default function Debts() {
       await walletActor.toggleDebtPaid(id);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -73,7 +73,7 @@ export default function Debts() {
       await walletActor.removeDebt(id);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 

@@ -16,6 +16,7 @@ persistent actor {
     player : Principal;
     playerName : Text;
     placements : [PlacedTile];
+    word : Text;
     score : Nat;
     passed : Bool;
     exchanged : Bool;
@@ -267,6 +268,36 @@ persistent actor {
       if (p.col != firstCol) { sameCol := false };
     };
     sameRow or sameCol;
+  };
+
+  func wordFromPlacements(placements : [PlacedTile]) : Text {
+    if (placements.size() == 0) { return "" };
+    let firstRow = placements[0].row;
+    var sameRow = true;
+    for (p in placements.vals()) { if (p.row != firstRow) { sameRow := false } };
+    var remaining = placements;
+    var word = "";
+    var i = 0;
+    while (i < placements.size()) {
+      var minIdx = 0;
+      var minVal = if (sameRow) { remaining[0].col } else { remaining[0].row };
+      var j = 1;
+      while (j < remaining.size()) {
+        let v = if (sameRow) { remaining[j].col } else { remaining[j].row };
+        if (v < minVal) { minVal := v; minIdx := j };
+        j += 1;
+      };
+      word #= remaining[minIdx].letter;
+      var newRemaining : [PlacedTile] = [];
+      var k = 0;
+      while (k < remaining.size()) {
+        if (k != minIdx) { newRemaining := Array.concat(newRemaining, [remaining[k]]) };
+        k += 1;
+      };
+      remaining := newRemaining;
+      i += 1;
+    };
+    word;
   };
 
   func computeScore(board : [PlacedTile], placements : [PlacedTile]) : Nat {
@@ -535,6 +566,8 @@ persistent actor {
       case (?g) {
         if (g.status != #active) { return false };
         if (g.turnOrder.size() == 0) { return false };
+        let hasUnresolvedDispute = Array.find<Dispute>(g.disputes, func(d : Dispute) : Bool { not d.resolved }) != null;
+        if (hasUnresolvedDispute) { return false };
         let currentPlayerId = g.turnOrder[g.currentTurnIndex % g.turnOrder.size()];
         if (not Principal.equal(currentPlayerId, caller)) { return false };
         if (placements.size() == 0) { return false };
@@ -549,7 +582,7 @@ persistent actor {
             let letters = Array.map<PlacedTile, Text>(placements, func(p : PlacedTile) : Text { p.letter });
             switch (removeFromRack(pl.rack, letters)) {
               case (?newRack) {
-                let needed = 7 - newRack.size();
+                let needed = if (newRack.size() < 7) { 7 - newRack.size() } else { 0 };
                 let (drawn, restBag) = drawTiles(g.bag, needed);
                 let filledRack = Array.concat(newRack, drawn);
                 let turnScore = computeScore(g.board, placements);
@@ -562,6 +595,7 @@ persistent actor {
                   player = caller;
                   playerName = pl.name;
                   placements;
+                  word = wordFromPlacements(placements);
                   score = turnScore;
                   passed = false;
                   exchanged = false;
@@ -600,6 +634,8 @@ persistent actor {
       case (?g) {
         if (g.status != #active) { return false };
         if (g.turnOrder.size() == 0) { return false };
+        let hasUnresolvedDispute = Array.find<Dispute>(g.disputes, func(d : Dispute) : Bool { not d.resolved }) != null;
+        if (hasUnresolvedDispute) { return false };
         let currentPlayerId = g.turnOrder[g.currentTurnIndex % g.turnOrder.size()];
         if (not Principal.equal(currentPlayerId, caller)) { return false };
         switch (findPlayer(g, caller)) {
@@ -610,6 +646,7 @@ persistent actor {
               player = caller;
               playerName = pl.name;
               placements = [];
+              word = "";
               score = 0;
               passed = true;
               exchanged = false;
@@ -639,6 +676,8 @@ persistent actor {
       case (?g) {
         if (g.status != #active) { return false };
         if (g.turnOrder.size() == 0) { return false };
+        let hasUnresolvedDispute = Array.find<Dispute>(g.disputes, func(d : Dispute) : Bool { not d.resolved }) != null;
+        if (hasUnresolvedDispute) { return false };
         if (letters.size() == 0) { return false };
         if (g.bag.size() < 7) { return false };
         let currentPlayerId = g.turnOrder[g.currentTurnIndex % g.turnOrder.size()];
@@ -660,6 +699,7 @@ persistent actor {
                   player = caller;
                   playerName = pl.name;
                   placements = [];
+                  word = "";
                   score = 0;
                   passed = false;
                   exchanged = true;
@@ -766,18 +806,40 @@ persistent actor {
               finalUphold := (Int.abs(Time.now()) % 2) == 0;
             };
             let t = g.turns[turnId];
+            let returnedLetters = Array.map<PlacedTile, Text>(t.placements, func(p : PlacedTile) : Text { p.letter });
             let players = if (not finalUphold) {
               updatePlayer(g.players, t.player, func(p : Player) : Player {
-                { p with score = if (p.score >= t.score) { p.score - t.score } else { 0 } };
+                {
+                  p with
+                  score = if (p.score >= t.score) { p.score - t.score } else { 0 };
+                  rack = Array.concat(p.rack, returnedLetters);
+                };
               });
             } else { g.players };
+            let board = if (not finalUphold) {
+              Array.filter<PlacedTile>(g.board, func(bt : PlacedTile) : Bool {
+                Array.find<PlacedTile>(t.placements, func(pp : PlacedTile) : Bool { pp.row == bt.row and pp.col == bt.col }) == null;
+              });
+            } else { g.board };
+            var newTurnIndex = g.currentTurnIndex;
+            if (not finalUphold) {
+              var idx = 0;
+              var found = false;
+              for (pId in g.turnOrder.vals()) {
+                if ((not found) and Principal.equal(pId, t.player)) {
+                  newTurnIndex := idx;
+                  found := true;
+                };
+                idx += 1;
+              };
+            };
             let turns = Array.map<Turn, Turn>(g.turns, func(tt : Turn) : Turn {
               if (tt.id == turnId) { { tt with resolved = true; upheld = finalUphold } } else { tt };
             });
             let disputes = Array.map<Dispute, Dispute>(g.disputes, func(dd : Dispute) : Dispute {
               if (dd.turnId == turnId) { { dd with resolved = true; outcome = ?finalUphold; coinFlipped } } else { dd };
             });
-            let updated = { g with players; turns; disputes };
+            let updated = { g with players; board; turns; disputes; currentTurnIndex = newTurnIndex };
             Map.add(games, Nat.compare, gameId, updated);
             true;
           };

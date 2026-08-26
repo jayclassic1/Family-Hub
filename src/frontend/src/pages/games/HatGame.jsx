@@ -180,7 +180,7 @@ export default function HatGame() {
       setSaved(true);
       setShowImportantForm(false);
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setSaving(false);
     }

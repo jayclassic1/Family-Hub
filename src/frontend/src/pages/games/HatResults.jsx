@@ -24,7 +24,7 @@ export default function HatResults() {
       const result = await hatGameActor.listDraws();
       setDraws(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [hatGameActor]);
 

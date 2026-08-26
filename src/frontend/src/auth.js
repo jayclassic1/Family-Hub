@@ -6,8 +6,16 @@ import { createAgent, resolveCanisterId } from "./agent.js";
 const isLocal = window.location.hostname.includes("localhost");
 
 export const IDENTITY_PROVIDER = isLocal
-  ? "http://id.ai.localhost:8000/authorize"
+  ? `http://id.ai.localhost:${window.location.port}/authorize`
   : "https://id.ai/authorize";
+
+// The canister-ID URL is the "primary" origin where existing accounts already
+// live. When the app is served from any other origin (e.g. a custom domain),
+// tell Internet Identity to derive principals as if we were still on the
+// primary origin, so everyone keeps the same account either way.
+const PRIMARY_ORIGIN = "https://r25io-syaaa-aaaad-agv6a-cai.icp.net";
+export const DERIVATION_ORIGIN =
+  !isLocal && window.location.origin !== PRIMARY_ORIGIN ? PRIMARY_ORIGIN : undefined;
 
 // 30 days in nanoseconds (the max Internet Identity allows)
 export const THIRTY_DAYS_NS = BigInt(30 * 24 * 60 * 60) * 1_000_000_000n;

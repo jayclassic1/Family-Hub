@@ -32,7 +32,7 @@ export default function Ledgers() {
       const result = await walletActor.listMyLedgers();
       setLedgers(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [walletActor]);
 
@@ -61,7 +61,7 @@ export default function Ledgers() {
       setSelectedPeople([]);
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setCreating(false);
     }

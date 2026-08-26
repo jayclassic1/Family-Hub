@@ -32,7 +32,7 @@ export default function RpsLobby() {
       const result = await rpsActor.listAllGames();
       setAllGames(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [rpsActor]);
 
@@ -61,7 +61,7 @@ export default function RpsLobby() {
       } catch (dmErr) {}
       navigate("/games/rock-paper-scissors/" + id.toString());
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setCreating(false);
     }

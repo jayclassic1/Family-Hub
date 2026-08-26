@@ -101,7 +101,7 @@ export default function Home() {
       const sorted = [...result].sort((a, b) => Number(a.id) - Number(b.id));
       setMessages(sorted);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [chatActor]);
 
@@ -191,10 +191,14 @@ export default function Home() {
     }
   }, [messages]);
 
+  const sendingRef = useRef(false);
+
   const handleSend = async (e) => {
     e.preventDefault();
     if (!chatActor) return;
     if (!text.trim() && !file) return;
+    if (sendingRef.current) return;
+    sendingRef.current = true;
 
     setSending(true);
     setError(null);
@@ -227,8 +231,9 @@ export default function Home() {
         } catch (e2) {}
       }
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
@@ -441,12 +446,19 @@ export default function Home() {
       </div>
 
       <form className="chat-input-row" onSubmit={handleSend}>
-        <input
+        <textarea
           className="chat-text-input"
+          rows={1}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Type a message..."
           disabled={sending}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend(e);
+            }
+          }}
         />
         <input
           ref={fileInputRef}

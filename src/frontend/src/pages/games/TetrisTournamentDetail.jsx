@@ -36,7 +36,7 @@ export default function TetrisTournamentDetail() {
       const result = await tetrisActor.getTournament(numericTournamentId);
       setTournament(result.length > 0 ? result[0] : null);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [tetrisActor, numericTournamentId]);
 
@@ -78,7 +78,7 @@ export default function TetrisTournamentDetail() {
       if (!ok) setError("Could not join — check your Love balance or the tournament may be full.");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -93,7 +93,7 @@ export default function TetrisTournamentDetail() {
       if (!ok) setError("Need at least 2 players to start.");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -107,7 +107,7 @@ export default function TetrisTournamentDetail() {
       await tetrisActor.cancelTournament(numericTournamentId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -120,7 +120,7 @@ export default function TetrisTournamentDetail() {
       await tetrisActor.submitScore(numericTournamentId, score);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 

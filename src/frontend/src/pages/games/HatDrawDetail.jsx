@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { createHatGameActor } from "../../hatgame.js";
@@ -34,7 +34,7 @@ export default function HatDrawDetail() {
       setDraw(d.length > 0 ? d[0] : null);
       setComments(cm);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [hatGameActor, numericDrawId]);
 
@@ -42,16 +42,22 @@ export default function HatDrawDetail() {
     refresh();
   }, [refresh]);
 
+  const commentingRef = useRef(false);
+
   const handleComment = async (e) => {
     e.preventDefault();
     if (!hatGameActor || !commentText.trim()) return;
+    if (commentingRef.current) return;
+    commentingRef.current = true;
     setError(null);
     try {
       await hatGameActor.addDrawComment(numericDrawId, commentText.trim());
       setCommentText("");
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
+    } finally {
+      commentingRef.current = false;
     }
   };
 
@@ -102,11 +108,18 @@ export default function HatDrawDetail() {
         ))}
       </div>
       <form className="chat-input-row" onSubmit={handleComment} style={{ marginTop: 10 }}>
-        <input
+        <textarea
           className="chat-text-input"
+          rows={1}
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
           placeholder="Add a comment..."
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleComment(e);
+            }
+          }}
         />
         <button className="chat-send-button" type="submit">Post</button>
       </form>

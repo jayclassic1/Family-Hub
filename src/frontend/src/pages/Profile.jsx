@@ -134,7 +134,7 @@ export default function Profile() {
       items.sort((a, b) => b.timestamp - a.timestamp);
       setActivity(items.slice(0, 12));
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [identity, userId]);
 
@@ -212,7 +212,7 @@ export default function Profile() {
         await refreshWall();
       }
     } catch (e2) {
-      setWallError(String(e2));
+      setWallError("Something went wrong. Please try again.");
     } finally {
       setWallPosting(false);
     }
@@ -263,7 +263,7 @@ export default function Profile() {
       setEditing(false);
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -296,7 +296,7 @@ export default function Profile() {
       if (fileInputRef.current) fileInputRef.current.value = "";
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -314,7 +314,7 @@ export default function Profile() {
       }
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 

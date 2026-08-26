@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { createAuthActor } from "../../auth.js";
@@ -48,7 +48,7 @@ export default function StrawDrawDetail() {
       setMyStraw(mine.length > 0 ? mine[0] : null);
       setComments(cm);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [strawActor, numericGameId]);
 
@@ -75,22 +75,28 @@ export default function StrawDrawDetail() {
       await strawActor.revealMyStraw(numericGameId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setRevealing(false);
     }
   };
 
+  const commentingRef = useRef(false);
+
   const handleComment = async (e) => {
     e.preventDefault();
     if (!strawActor || !commentText.trim()) return;
+    if (commentingRef.current) return;
+    commentingRef.current = true;
     setError(null);
     try {
       await strawActor.addComment(numericGameId, commentText.trim());
       setCommentText("");
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
+    } finally {
+      commentingRef.current = false;
     }
   };
 
@@ -160,7 +166,7 @@ export default function StrawDrawDetail() {
         ))}
       </div>
       <form className="chat-input-row" onSubmit={handleComment} style={{ marginTop: 10 }}>
-        <input className="chat-text-input" value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Add a comment..." />
+        <textarea className="chat-text-input" rows={1} value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Add a comment..." onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleComment(e); } }} />
         <button className="chat-send-button" type="submit">Post</button>
       </form>
 

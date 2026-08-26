@@ -38,7 +38,7 @@ export default function Votes() {
       const result = await votesActor.listPollsWithResults();
       setSummaries(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [votesActor]);
 
@@ -56,7 +56,7 @@ export default function Votes() {
       if (!ok) setError("Could not send Love (maybe you don't have any, or already sent it here).");
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -141,7 +141,7 @@ export default function Votes() {
       if (fileInputRef.current) fileInputRef.current.value = "";
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 

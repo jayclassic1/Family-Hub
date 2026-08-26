@@ -145,7 +145,7 @@ export default function AlbumDetail() {
         setError("This album couldn't be found — it may have been deleted.");
       }
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
       setAlbum(null);
     } finally {
       setLoading(false);
@@ -174,7 +174,7 @@ export default function AlbumDetail() {
       await albumsActor.deleteAlbum(numericAlbumId);
       navigate("/albums");
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -215,7 +215,7 @@ export default function AlbumDetail() {
       setPendingFiles([]);
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setUploading(false);
       setUploadProgress(null);
@@ -230,7 +230,7 @@ export default function AlbumDetail() {
       if (!ok) setError("Could not send Love (maybe you don't have any, or already sent it here).");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -242,7 +242,7 @@ export default function AlbumDetail() {
       if (!ok) setError("Could not record your reaction (maybe you already reacted, or it's your own photo).");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -258,7 +258,7 @@ export default function AlbumDetail() {
         await refresh();
       }
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 

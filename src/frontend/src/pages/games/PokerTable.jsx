@@ -128,7 +128,7 @@ export default function PokerTable() {
       const result = await pokerActor.getTable(numericTableId);
       setTable(result.length > 0 ? result[0] : null);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [pokerActor, numericTableId]);
 
@@ -266,7 +266,7 @@ export default function PokerTable() {
       setJoinSeatIndex(null);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -291,7 +291,7 @@ export default function PokerTable() {
       setRaiseInput("");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -305,7 +305,7 @@ export default function PokerTable() {
       await pokerActor.leaveTable(numericTableId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -319,7 +319,7 @@ export default function PokerTable() {
       await pokerActor.startNextHand(numericTableId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -333,7 +333,7 @@ export default function PokerTable() {
       await pokerActor.skipInactivePlayer(numericTableId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }

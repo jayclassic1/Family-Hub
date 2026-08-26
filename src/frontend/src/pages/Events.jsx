@@ -71,7 +71,7 @@ export default function Events() {
       }
       setRsvpMap(rmap);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [eventsActor]);
 
@@ -142,7 +142,7 @@ export default function Events() {
       await refresh();
       closeModal();
     } catch (e2) {
-      setQuickError(String(e2));
+      setQuickError("Something went wrong. Please try again.");
     } finally {
       setQuickSaving(false);
     }
@@ -153,7 +153,7 @@ export default function Events() {
     if (!file) return;
     const err = validatePhoto(file);
     if (err) {
-      setQuickError(err);
+      setQuickError("Something went wrong. Please try again.");
       e.target.value = "";
       return;
     }
@@ -192,7 +192,7 @@ export default function Events() {
       setDetailedCoverPhoto(null);
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -201,7 +201,7 @@ export default function Events() {
     if (!file) return;
     const err = validatePhoto(file);
     if (err) {
-      setError(err);
+      setError("Something went wrong. Please try again.");
       e.target.value = "";
       return;
     }
@@ -216,7 +216,7 @@ export default function Events() {
       await eventsActor.rsvp(eventId, { [response]: null });
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { createRpsActor, CHOICE_EMOJI, choiceKey, statusKey } from "../../rpsApi.js";
@@ -80,7 +80,7 @@ export default function RpsGame() {
       setMyChoice(mine.length > 0 ? Object.keys(mine[0])[0] : null);
       setComments(cm);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [rpsActor, numericGameId, prevStatus]);
 
@@ -105,7 +105,7 @@ export default function RpsGame() {
       await rpsActor.confirmJoin(numericGameId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -116,7 +116,7 @@ export default function RpsGame() {
       await rpsActor.makeChoice(numericGameId, { [choice]: null });
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -128,7 +128,7 @@ export default function RpsGame() {
       await rpsActor.playAgain(numericGameId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -164,22 +164,28 @@ export default function RpsGame() {
       setShowImportantForm(false);
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
+  const commentingRef = useRef(false);
+
   const handleComment = async (e) => {
     e.preventDefault();
     if (!rpsActor || !commentText.trim()) return;
+    if (commentingRef.current) return;
+    commentingRef.current = true;
     setError(null);
     try {
       await rpsActor.addComment(numericGameId, commentText.trim());
       setCommentText("");
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
+    } finally {
+      commentingRef.current = false;
     }
   };
 
@@ -314,7 +320,7 @@ export default function RpsGame() {
         ))}
       </div>
       <form className="chat-input-row" onSubmit={handleComment} style={{ marginTop: 10 }}>
-        <input className="chat-text-input" value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Add a comment..." />
+        <textarea className="chat-text-input" rows={1} value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Add a comment..." onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleComment(e); } }} />
         <button className="chat-send-button" type="submit">Post</button>
       </form>
 

@@ -35,7 +35,7 @@ export default function Tree() {
       setUsers(u);
       setEdges(e);
     } catch (err) {
-      setError(String(err));
+      setError("Something went wrong. Please try again.");
     }
   }, [authActor, treeActor]);
 
@@ -64,7 +64,7 @@ export default function Tree() {
       }
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setClaiming(false);
     }
@@ -83,7 +83,7 @@ export default function Tree() {
       setChildSel("");
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -100,7 +100,7 @@ export default function Tree() {
       setSpouseBSel("");
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -111,7 +111,7 @@ export default function Tree() {
       await treeActor.removeEdge(edgeId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 

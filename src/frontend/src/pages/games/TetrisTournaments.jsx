@@ -35,7 +35,7 @@ export default function TetrisTournaments() {
       const result = await tetrisActor.listTournaments();
       setTournaments(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [tetrisActor]);
 
@@ -58,7 +58,7 @@ export default function TetrisTournaments() {
       const id = await tetrisActor.createTournament(name.trim(), Number(maxPlayers), wager);
       navigate("/games/tetris/tournaments/" + id.toString());
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setCreating(false);
     }

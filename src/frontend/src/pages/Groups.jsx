@@ -31,7 +31,7 @@ export default function Groups() {
       setAllGroups(all);
       setMyGroups(mine);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [groupsActor]);
 
@@ -52,7 +52,7 @@ export default function Groups() {
       setIsPublic(true);
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -64,7 +64,7 @@ export default function Groups() {
       if (!ok) setError("Could not join — this group may be invite-only.");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 

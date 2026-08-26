@@ -81,7 +81,7 @@ export default function DmThread() {
       const sorted = [...result].sort((a, b) => Number(a.id) - Number(b.id));
       setMessages(sorted);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [dmsActor, userId]);
 
@@ -101,10 +101,14 @@ export default function DmThread() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const sendingRef = useRef(false);
+
   const handleSend = async (e) => {
     e.preventDefault();
     if (!dmsActor) return;
     if (!text.trim() && !file) return;
+    if (sendingRef.current) return;
+    sendingRef.current = true;
 
     setSending(true);
     setError(null);
@@ -120,8 +124,9 @@ export default function DmThread() {
       if (fileInputRef.current) fileInputRef.current.value = "";
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
@@ -212,12 +217,19 @@ export default function DmThread() {
       </div>
 
       <form className="chat-input-row" onSubmit={handleSend}>
-        <input
+        <textarea
           className="chat-text-input"
+          rows={1}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={"Message " + otherName + "..."}
           disabled={sending}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend(e);
+            }
+          }}
         />
         <input
           ref={fileInputRef}

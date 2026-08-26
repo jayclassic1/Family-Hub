@@ -54,7 +54,7 @@ export default function LedgerDetail() {
         setSplitAmong(foundLedger.participants.map((p) => p.toString()));
       }
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
     // eslint-disable-next-line
   }, [walletActor, numericLedgerId]);
@@ -92,7 +92,7 @@ export default function LedgerDetail() {
       setAmount("");
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -105,7 +105,7 @@ export default function LedgerDetail() {
       await walletActor.deleteExpense(expenseId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -121,7 +121,7 @@ export default function LedgerDetail() {
         await refresh();
       }
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 

@@ -63,7 +63,7 @@ export default function MarketplaceDetail() {
       const result = await marketplaceActor.getListing(numericListingId);
       setListing(result.length > 0 ? result[0] : null);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [marketplaceActor, numericListingId]);
 
@@ -96,7 +96,7 @@ export default function MarketplaceDetail() {
       if (!ok) setError("Could not buy — check your Love balance.");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -113,7 +113,7 @@ export default function MarketplaceDetail() {
       setBidInput("");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -128,7 +128,7 @@ export default function MarketplaceDetail() {
       if (!ok) setError("Could not accept that bid — the bidder may not have enough Love anymore.");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -142,7 +142,7 @@ export default function MarketplaceDetail() {
       await marketplaceActor.markSold(numericListingId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -157,7 +157,7 @@ export default function MarketplaceDetail() {
       await marketplaceActor.cancelListing(numericListingId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -177,7 +177,7 @@ export default function MarketplaceDetail() {
         setBusy(false);
       }
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
       setBusy(false);
     }
   };

@@ -3,7 +3,7 @@ import { safeGetCanisterEnv } from "@icp-sdk/core/agent/canister-env";
 
 const isLocal = window.location.hostname.includes("localhost");
 
-export const AGENT_HOST = isLocal ? "http://localhost:8000" : "https://icp-api.io";
+export const AGENT_HOST = isLocal ? "http://localhost:" + window.location.port : "https://icp-api.io";
 
 export function getCanisterEnv() {
   return safeGetCanisterEnv();

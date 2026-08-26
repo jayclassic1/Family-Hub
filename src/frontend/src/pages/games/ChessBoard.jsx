@@ -127,7 +127,7 @@ export default function ChessBoard() {
       prevMoveCountRef.current = newMoveCount;
       localMoveJustPlayedRef.current = false;
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [chessActor, numericGameId, applyMoveEffects]);
 
@@ -208,7 +208,7 @@ export default function ChessBoard() {
       setLegalTargets([]);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -221,7 +221,7 @@ export default function ChessBoard() {
       await chessActor.resign(numericGameId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -233,7 +233,7 @@ export default function ChessBoard() {
       if (!ok) setError("Could not join this game.");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   };
 

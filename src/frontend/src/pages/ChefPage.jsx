@@ -36,7 +36,7 @@ export default function ChefPage() {
       setSummary(s.length > 0 ? s[0] : null);
       setRecipes(rs);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [recipesActor, chefId]);
 
@@ -67,7 +67,7 @@ export default function ChefPage() {
       if (fileInputRef.current) fileInputRef.current.value = "";
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setUploading(false);
     }

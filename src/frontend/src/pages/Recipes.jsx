@@ -38,7 +38,7 @@ export default function Recipes() {
       setRecipes(recipeResult);
       setChefs(chefResult);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [recipesActor]);
 
@@ -73,7 +73,7 @@ export default function Recipes() {
       if (!ok) setError("Could not send Love (maybe you don't have any, or already sent it here).");
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -99,7 +99,7 @@ export default function Recipes() {
       if (fileInputRef.current) fileInputRef.current.value = "";
       await refresh();
     } catch (e2) {
-      setError(String(e2));
+      setError("Something went wrong. Please try again.");
     } finally {
       setCreating(false);
     }

@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { createAuthActor } from "../auth.js";
 
 export default function AuthGate({ children }) {
-  const { loading, isLoggedIn, needsRegistration, login, register, error, identity, logout, profile, reloadProfile } = useAuth();
+  const { loading, isLoggedIn, needsRegistration, login, loginWithPassword, register, error, identity, logout, profile, reloadProfile } = useAuth();
   const [username, setUsername] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -11,6 +11,17 @@ export default function AuthGate({ children }) {
   const [genderSubmitting, setGenderSubmitting] = useState(false);
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedInLaw, setSelectedInLaw] = useState(null);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordMode, setPasswordMode] = useState("login");
+  const [pwUsername, setPwUsername] = useState("");
+  const [pwPassword, setPwPassword] = useState("");
+  const [pwSubmitting, setPwSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (needsRegistration && pwUsername && !username) {
+      setUsername(pwUsername);
+    }
+  }, [needsRegistration, pwUsername, username]);
 
   useEffect(() => {
     if (!identity || needsRegistration) {
@@ -38,9 +49,87 @@ export default function AuthGate({ children }) {
         <div className="auth-card">
           <div className="auth-emoji">🏡</div>
           <h1>Chitze Chat</h1>
-          <button className="auth-button" onClick={login}>
-            Login/Create
-          </button>
+          {!showPasswordForm ? (
+            <>
+              <button className="auth-button" type="button" onClick={() => setShowPasswordForm(true)}>
+                Login/Create
+              </button>
+              <button className="auth-button" onClick={login} style={{ marginTop: 10 }}>
+                Login with Internet Identity
+              </button>
+              <p className="tree-rel" style={{ marginTop: 6 }}>
+                Recommended — more secure, nothing to remember or lose.
+              </p>
+            </>
+          ) : (
+            <>
+              <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 14 }}>
+                <button
+                  type="button"
+                  className={"auth-button" + (passwordMode === "login" ? " active" : "")}
+                  onClick={() => setPasswordMode("login")}
+                >
+                  Log In
+                </button>
+                <button
+                  type="button"
+                  className={"auth-button" + (passwordMode === "signup" ? " active" : "")}
+                  onClick={() => setPasswordMode("signup")}
+                >
+                  New Here
+                </button>
+              </div>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!pwUsername.trim() || !pwPassword) return;
+                  setPwSubmitting(true);
+                  try {
+                    await loginWithPassword(pwUsername.trim(), pwPassword);
+                  } finally {
+                    setPwSubmitting(false);
+                  }
+                }}
+              >
+                <input
+                  className="auth-input"
+                  value={pwUsername}
+                  onChange={(e) => setPwUsername(e.target.value)}
+                  placeholder="Your name"
+                  disabled={pwSubmitting}
+                />
+                <input
+                  className="auth-input"
+                  type="password"
+                  value={pwPassword}
+                  onChange={(e) => setPwPassword(e.target.value)}
+                  placeholder="Password"
+                  disabled={pwSubmitting}
+                />
+                <button className="auth-button" type="submit" disabled={pwSubmitting}>
+                  {pwSubmitting ? "..." : passwordMode === "login" ? "Log In" : "Continue"}
+                </button>
+              </form>
+              {passwordMode === "login" && (
+                <p className="tree-rel" style={{ marginTop: 8 }}>
+                  Tip: your name and password must match exactly what you used before (capitalization counts).
+                </p>
+              )}
+              {passwordMode === "signup" && (
+                <p className="tree-rel" style={{ marginTop: 8 }}>
+                  Pick any password — just remember it, since there's no way to reset it later.
+                </p>
+              )}
+              <button
+                type="button"
+                className="tree-remove-btn"
+                style={{ marginTop: 10 }}
+                onClick={() => setShowPasswordForm(false)}
+              >
+                Back
+              </button>
+            </>
+          )}
           {error && <p className="auth-error">{error}</p>}
         </div>
       </div>

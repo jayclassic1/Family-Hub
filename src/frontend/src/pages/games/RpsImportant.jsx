@@ -24,7 +24,7 @@ export default function RpsImportant() {
       const result = await rpsActor.listImportantGames();
       setGames(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [rpsActor]);
 

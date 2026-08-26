@@ -24,7 +24,7 @@ export default function SpinResults() {
       const result = await spinsActor.listSpins();
       setSpins(result);
     } catch (e) {
-      setError(String(e));
+      setError("Something went wrong. Please try again.");
     }
   }, [spinsActor]);
 
