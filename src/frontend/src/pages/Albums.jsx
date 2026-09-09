@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { createAlbumsActor } from "../albums.js";
-import { fileToAttachment, attachmentToUrl, MAX_UPLOAD_BYTES } from "../chat.js";
+import { createChatActor, fileToAttachment, attachmentToUrl, MAX_UPLOAD_BYTES } from "../chat.js";
+import JSZip from "jszip";
 
 const IMAGE_TYPES = ["image/png", "image/jpeg"];
 
@@ -15,6 +16,8 @@ export default function Albums() {
   const [description, setDescription] = useState("");
   const [coverFile, setCoverFile] = useState(null);
   const [error, setError] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [zipping, setZipping] = useState(false);
 
   useEffect(() => {
     if (!identity) return;
@@ -38,16 +41,58 @@ export default function Albums() {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    if (!identity) return;
+    (async () => {
+      try {
+        const chatActor = await createChatActor(identity);
+        const result = await chatActor.getMessages();
+        setChatMessages(result);
+      } catch (e) {}
+    })();
+  }, [identity]);
+
+  const handleDownloadZip = async (scope) => {
+    if (zipping) return;
+    const targets = chatMessages.filter((m) => {
+      if (m.attachment.length === 0) return false;
+      if (scope === "all") return true;
+      const daysOld = (Date.now() - Number(m.timestamp) / 1_000_000) / (1000 * 60 * 60 * 24);
+      return 30 - daysOld <= 7;
+    });
+    if (targets.length === 0) {
+      setError("No images match that option right now.");
+      return;
+    }
+    setZipping(true);
+    setError(null);
+    try {
+      const zip = new JSZip();
+      targets.forEach((m) => {
+        const a = m.attachment[0];
+        zip.file(m.id.toString() + "_" + a.filename, new Uint8Array(a.data));
+      });
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "home-chat-photos.zip";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError("Something went wrong building the zip. Please try again.");
+    } finally {
+      setZipping(false);
+    }
+  };
+
   const handleCoverChange = (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
     if (!IMAGE_TYPES.includes(f.type)) {
       setError("Cover photo must be a PNG or JPG.");
-      e.target.value = "";
-      return;
-    }
-    if (f.size > MAX_UPLOAD_BYTES) {
-      setError("Photo is too large (max ~3.3MB).");
       e.target.value = "";
       return;
     }
@@ -93,6 +138,18 @@ export default function Albums() {
     <div>
       <h1 className="page-title">Albums</h1>
       <p className="page-subtitle">Browse family photo albums, or start your own.</p>
+
+      <div className="tree-admin-panel" style={{ marginBottom: 20 }}>
+        <h2 className="tree-admin-title">Home Chat photos</h2>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button className="chat-send-button" onClick={() => handleDownloadZip("expiring")} disabled={zipping}>
+            {zipping ? "Zipping..." : "📦 Download Expiring Soon"}
+          </button>
+          <button className="chat-send-button" onClick={() => handleDownloadZip("all")} disabled={zipping}>
+            {zipping ? "Zipping..." : "📦 Download All Photos"}
+          </button>
+        </div>
+      </div>
 
       <div className="card-grid tree-grid">
         {summaries.map((s) => {

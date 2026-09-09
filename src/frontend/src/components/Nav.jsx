@@ -66,7 +66,7 @@ function eventIsGlowing(events) {
 }
 
 export default function Nav() {
-  const { profile, identity, logout } = useAuth();
+  const { profile, identity, logout, websiteName } = useAuth();
   const [glowPages, setGlowPages] = useState({});
   const [mobileOpen, setMobileOpen] = useState(false);
   const latestCreatedRef = useRef({});
@@ -128,7 +128,7 @@ export default function Nav() {
 
   return (
     <nav className="nav">
-      <div className="nav-title">🐟 Chitze Chat</div>
+      <div className="nav-title">🐟 {websiteName}</div>
       <button
         className="nav-hamburger"
         onClick={() => setMobileOpen((o) => !o)}

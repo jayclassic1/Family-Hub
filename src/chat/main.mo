@@ -4,6 +4,7 @@ import Array "mo:core/Array";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
+import Timer "mo:core/Timer";
 import Types "../shared/Types";
 
 persistent actor {
@@ -46,6 +47,28 @@ persistent actor {
   };
 
   let messages = Map.empty<Nat, ChatMessage>();
+
+  // Attachments older than this are cleared to keep storage costs down;
+  // the message text itself is kept, with a placeholder shown in its place.
+  let THIRTY_DAYS_NS : Int = 30 * 24 * 60 * 60 * 1_000_000_000;
+  let expiredImageIds = Map.empty<Nat, Bool>();
+
+  func cleanupExpiredImages() : async () {
+    let cutoff = Time.now() - THIRTY_DAYS_NS;
+    let toExpire = Array.filter<ChatMessage>(
+      Array.fromIter<ChatMessage>(Map.values(messages)),
+      func(m : ChatMessage) : Bool { m.attachment != null and m.timestamp < cutoff }
+    );
+    for (m in toExpire.vals()) {
+      let updated = { m with attachment = null };
+      Map.add(messages, Nat.compare, m.id, updated);
+      Map.add(expiredImageIds, Nat.compare, m.id, true);
+    };
+  };
+
+  // Re-registered on every init/upgrade, since timer registrations do not
+  // themselves persist in stable memory -- this runs once a day.
+  ignore Timer.recurringTimer<system>(#seconds(86400), cleanupExpiredImages);
   var messageCounter : Nat = 0;
 
   let reactions = Map.empty<Nat, Map.Map<Principal, Bool>>();
@@ -133,6 +156,7 @@ persistent actor {
       animated = m.animated;
       isBanner = m.isBanner;
       isPinned = m.isPinned;
+      imageExpired = Map.get(expiredImageIds, Nat.compare, m.id) != null;
     }
   };
 

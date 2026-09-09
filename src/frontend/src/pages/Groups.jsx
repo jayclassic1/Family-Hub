@@ -71,13 +71,6 @@ export default function Groups() {
   return (
     <div>
       <h1 className="page-title">Groups</h1>
-      <p className="page-subtitle">Create a group chat, public or invite-only.</p>
-
-      <Link to="/people" className="chat-send-button" style={{ display: "inline-block", textDecoration: "none", marginBottom: 16 }}>
-        💬 DMs
-      </Link>
-
-      <h2 className="tree-admin-title">All groups</h2>
       <div className="card-grid tree-grid">
         {allGroups.map((g) => {
           const isMine = myGroupIds.has(g.id.toString());

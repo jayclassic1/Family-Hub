@@ -34,6 +34,7 @@ export default function Events() {
   const [annualMonth, setAnnualMonth] = useState("1");
   const [annualDay, setAnnualDay] = useState("1");
   const [visibility, setVisibility] = useState("everyone");
+  const [allowRsvp, setAllowRsvp] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [detailedCoverPhoto, setDetailedCoverPhoto] = useState(null);
 
@@ -183,12 +184,13 @@ export default function Events() {
           : { selected: selectedUserIds.map((id) => users.find((u) => u.id.toString() === id).id) };
       let cover = [];
       if (detailedCoverPhoto) cover = [await fileToAttachment(detailedCoverPhoto)];
-      await eventsActor.createEvent(detailedTitle.trim(), detailedDescription.trim(), kind, vis, cover);
+      await eventsActor.createEvent(detailedTitle.trim(), detailedDescription.trim(), kind, vis, cover, allowRsvp);
       setDetailedTitle("");
       setDetailedDescription("");
       setOneTimeDate("");
       setSelectedUserIds([]);
       setVisibility("everyone");
+      setAllowRsvp(false);
       setDetailedCoverPhoto(null);
       await refresh();
     } catch (e2) {
@@ -225,7 +227,6 @@ export default function Events() {
   return (
     <div>
       <h1 className="page-title">Events</h1>
-      <p className="page-subtitle">Flip through months, click a date to view or add events.</p>
 
       <div className="tree-admin-panel">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -257,14 +258,19 @@ export default function Events() {
                   "calendar-cell" +
                   (date ? " calendar-cell-active" : "") +
                   (isSelected ? " calendar-cell-selected" : "") +
-                  (isToday ? " calendar-cell-today" : "")
+                  (isToday ? " calendar-cell-today" : "") +
+                  (dayEvents.length > 0 ? " calendar-cell-has-event" : "") +
+                  (dayEvents.length > 0 && isToday ? " calendar-cell-event-today" : "")
                 }
+                title={dayEvents.length > 0 ? dayEvents.map((e) => e.title).join(", ") : undefined}
                 onClick={() => date && handleDayClick(date)}
               >
-                {date && <div className="calendar-day-num">{date.getDate()}</div>}
                 {dayEvents.length > 0 && (
-                  <div className="calendar-dot" title={dayEvents.map((e) => e.title).join(", ")} />
+                  <div className="calendar-event-label">
+                    {dayEvents.map((e) => e.title).join(", ")}
+                  </div>
                 )}
+                {date && <div className="calendar-day-num">{date.getDate()}</div>}
               </div>
             );
           })}
@@ -362,28 +368,30 @@ export default function Events() {
             )}
             <div className="card-title">{ev.title}</div>
             <div className="card-description">{formatEventKind(ev)}</div>
-            <div className="tree-rel">
-              by <Link to={"/profile/" + ev.creator.toString()} onClick={(e) => e.stopPropagation()}>{ev.creatorName}</Link>
-            </div>
-            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-              {["yes", "maybe", "no"].map((r) => (
-                <button
-                  key={r}
-                  className="chat-send-button"
-                  style={{
-                    padding: "4px 10px",
-                    fontSize: 12,
-                    background: rsvpMap[ev.id.toString()] === r ? "var(--orange-dark)" : "var(--orange)",
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRsvp(ev.id, r);
-                  }}
-                >
-                  {r === "yes" ? "Yes" : r === "no" ? "No" : "Maybe"}
-                </button>
-              ))}
-            </div>
+            {ev.allowRsvp && (
+              <>
+                <div className="tree-rel" style={{ marginTop: 8 }}>Want to go?</div>
+                <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                  {["yes", "maybe", "no"].map((r) => (
+                    <button
+                      key={r}
+                      className="chat-send-button"
+                      style={{
+                        padding: "4px 10px",
+                        fontSize: 12,
+                        background: rsvpMap[ev.id.toString()] === r ? "var(--orange-dark)" : "var(--orange)",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRsvp(ev.id, r);
+                      }}
+                    >
+                      {r === "yes" ? "Yes" : r === "no" ? "No" : "Maybe"}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         ))}
         {upcoming.length === 0 && <p className="chat-empty">No upcoming events yet.</p>}
@@ -391,9 +399,6 @@ export default function Events() {
 
       <div className="tree-admin-panel" style={{ marginTop: 24 }}>
         <h2 className="tree-admin-title">Add a detailed event</h2>
-        <p className="tree-rel" style={{ marginBottom: 10 }}>
-          Use this for yearly events (birthdays, holidays) or events with custom visibility.
-        </p>
         <form onSubmit={handleDetailedAdd}>
           <input
             className="chat-text-input"
@@ -409,6 +414,18 @@ export default function Events() {
             value={detailedDescription}
             onChange={(e) => setDetailedDescription(e.target.value)}
           />
+          <label style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+            <input type="checkbox" checked={allowRsvp} onChange={(e) => setAllowRsvp(e.target.checked)} />
+            Allow people to RSVP (Yes / No / Maybe)
+          </label>
+          <div style={{ marginBottom: 10, display: "flex", gap: 16 }}>
+            <label>
+              <input type="radio" checked={visibility === "everyone"} onChange={() => setVisibility("everyone")} /> Everyone can see
+            </label>
+            <label>
+              <input type="radio" checked={visibility === "selected"} onChange={() => setVisibility("selected")} /> Only selected people
+            </label>
+          </div>
           <div style={{ marginBottom: 10, display: "flex", gap: 16 }}>
             <label>
               <input type="radio" checked={dateMode === "oneTime"} onChange={() => setDateMode("oneTime")} /> One-time
@@ -439,14 +456,6 @@ export default function Events() {
               </select>
             </div>
           )}
-          <div style={{ marginBottom: 10, display: "flex", gap: 16 }}>
-            <label>
-              <input type="radio" checked={visibility === "everyone"} onChange={() => setVisibility("everyone")} /> Everyone can see
-            </label>
-            <label>
-              <input type="radio" checked={visibility === "selected"} onChange={() => setVisibility("selected")} /> Only selected people
-            </label>
-          </div>
           {visibility === "selected" && (
             <div style={{ marginBottom: 10, display: "flex", flexWrap: "wrap", gap: 10 }}>
               {users

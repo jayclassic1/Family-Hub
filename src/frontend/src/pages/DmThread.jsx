@@ -7,6 +7,9 @@ import { fileToAttachment, attachmentToUrl, isImageAttachment } from "../chat.js
 import Lightbox from "../components/Lightbox.jsx";
 import { Principal } from "@icp-sdk/core/principal";
 import StyledUserName from "../components/StyledUserName.jsx";
+import ChatBubbleSkin from "../components/ChatBubbleSkin.jsx";
+import { playChatDing } from "../soundEffects.js";
+import JSZip from "jszip";
 import { createShopActor } from "../shopApi.js";
 
 const ALLOWED_TYPES = [
@@ -97,9 +100,57 @@ export default function DmThread() {
     dmsActor.markRead(Principal.fromText(userId)).catch(() => {});
   }, [dmsActor, userId, messages.length]);
 
+  const lastMessageIdRef = useRef(null);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length === 0) return;
+    const lastId = messages[messages.length - 1].id.toString();
+    if (lastId === lastMessageIdRef.current) return;
+    const isFirstLoad = lastMessageIdRef.current === null;
+    lastMessageIdRef.current = lastId;
+    bottomRef.current?.scrollIntoView({ behavior: isFirstLoad ? "auto" : "smooth" });
+    if (!isFirstLoad) {
+      playChatDing();
+    }
   }, [messages]);
+
+  const [zipping, setZipping] = useState(false);
+
+  const handleDownloadZip = async (scope) => {
+    if (zipping) return;
+    const targets = messages.filter((m) => {
+      if (m.attachment.length === 0) return false;
+      if (scope === "all") return true;
+      const daysOld = (Date.now() - Number(m.timestamp) / 1_000_000) / (1000 * 60 * 60 * 24);
+      return 30 - daysOld <= 7;
+    });
+    if (targets.length === 0) {
+      setError("No images match that option right now.");
+      return;
+    }
+    setZipping(true);
+    setError(null);
+    try {
+      const zip = new JSZip();
+      targets.forEach((m) => {
+        const a = m.attachment[0];
+        zip.file(m.id.toString() + "_" + a.filename, new Uint8Array(a.data));
+      });
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "dm-photos.zip";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError("Something went wrong building the zip. Please try again.");
+    } finally {
+      setZipping(false);
+    }
+  };
 
   const sendingRef = useRef(false);
 
@@ -139,8 +190,9 @@ export default function DmThread() {
       e.target.value = "";
       return;
     }
-    if (f.size > MAX_UPLOAD_BYTES) {
-      setError("File is too large (max ~3.3MB for now).");
+    const willBeCompressed = f.type.startsWith("image/") && f.type !== "image/gif";
+    if (!willBeCompressed && f.size > MAX_UPLOAD_BYTES) {
+      setError("File is too large (max ~1.8MB for now).");
       e.target.value = "";
       return;
     }
@@ -161,13 +213,35 @@ export default function DmThread() {
           const attachment = m.attachment.length > 0 ? m.attachment[0] : null;
           const isImg = attachment ? isImageAttachment(attachment) : false;
           return (
-            <div key={m.id.toString()} className={"chat-message" + (isMe ? " chat-message-me" : "")}>
+            <ChatBubbleSkin key={m.id.toString()} userId={m.sender} isMe={isMe} myShopProfile={myShopProfile}>
+              {(skinClass) => (
+            <div className={"chat-message" + (isMe ? " chat-message-me" : "") + skinClass}>
               <div className="chat-message-sender">
                 <Link to={"/profile/" + m.sender.toString()}>
                   <StyledUserName userId={m.sender} name={m.senderName} isMe={isMe} myShopProfile={myShopProfile} />
                 </Link>
               </div>
               {m.text ? <div className="chat-message-text">{m.text}</div> : null}
+              {attachment && (() => {
+                const daysOld = (Date.now() - Number(m.timestamp) / 1_000_000) / (1000 * 60 * 60 * 24);
+                const daysRemaining = Math.max(0, Math.ceil(30 - daysOld));
+                return daysRemaining <= 7 ? (
+                  <div
+                    className="tree-rel"
+                    style={{
+                      background: "#fff3d6",
+                      border: "1px solid #f2b84c",
+                      borderRadius: 8,
+                      padding: "4px 8px",
+                      marginTop: 4,
+                      fontWeight: 700,
+                      color: "#a3591f",
+                    }}
+                  >
+                    ⚠️ Image expires in {daysRemaining} {daysRemaining === 1 ? "day" : "days"}
+                  </div>
+                ) : null;
+              })()}
               {attachment && isImg ? (
                 <img
                   className="chat-attachment-image zoomable-image"
@@ -179,6 +253,9 @@ export default function DmThread() {
               {attachment && !isImg ? (
                 <a className="chat-attachment-file" href={attachmentToUrl(attachment)} download={attachment.filename}>Attachment: {attachment.filename}</a>
               ) : null}
+              {!attachment && m.imageExpired && (
+                <div className="tree-rel" style={{ fontStyle: "italic" }}>🖼️ Image Expired</div>
+              )}
               <div className="tree-rel" style={{ marginTop: 4 }}>
                 👎 {m.thumbsDownCount.toString()}
               </div>
@@ -211,9 +288,20 @@ export default function DmThread() {
                 </button>
               )}
             </div>
+              )}
+            </ChatBubbleSkin>
           );
         })}
         <div ref={bottomRef} />
+      </div>
+
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+        <button className="chat-send-button" onClick={() => handleDownloadZip("expiring")} disabled={zipping}>
+          {zipping ? "Zipping..." : "📦 Download Expiring Soon"}
+        </button>
+        <button className="chat-send-button" onClick={() => handleDownloadZip("all")} disabled={zipping}>
+          {zipping ? "Zipping..." : "📦 Download All Photos"}
+        </button>
       </div>
 
       <form className="chat-input-row" onSubmit={handleSend}>

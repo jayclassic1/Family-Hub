@@ -7,6 +7,9 @@ import StyledUserName from "../components/StyledUserName.jsx";
 import { createShopActor } from "../shopApi.js";
 import { ThumbsUpIcon, ThumbsDownIcon, HeartIcon } from "../components/ReactionIcons.jsx";
 import { LovedEffectOverlay, SendEffectOverlay } from "../components/LoveEffects.jsx";
+import { createAuthActor } from "../auth.js";
+import ChatBubbleSkin from "../components/ChatBubbleSkin.jsx";
+import { useTopBarActions } from "../context/TopBarActionsContext.jsx";
 
 function shareIcon(shareType) {
   const icons = {
@@ -32,11 +35,39 @@ const ALLOWED_TYPES = [
 ];
 
 import { MAX_UPLOAD_BYTES } from "../chat.js";
+import { playChatDing } from "../soundEffects.js";
 
 export default function Home() {
   const { profile, identity } = useAuth();
   const isAdmin = profile && "admin" in profile.role;
+  const { setAction } = useTopBarActions() || {};
   const [chatActor, setChatActor] = useState(null);
+  const [birthdayNames, setBirthdayNames] = useState([]);
+
+  useEffect(() => {
+    if (!identity) return;
+    (async () => {
+      try {
+        const authActor = await createAuthActor(identity);
+        const allUsers = await authActor.getAllUsers();
+        const today = new Date();
+        const todayMonth = today.getMonth() + 1;
+        const todayDay = today.getDate();
+        const names = allUsers
+          .filter(
+            (u) =>
+              u.birthdayMonth.length > 0 &&
+              u.birthdayDay.length > 0 &&
+              Number(u.birthdayMonth[0]) === todayMonth &&
+              Number(u.birthdayDay[0]) === todayDay
+          )
+          .map((u) => u.username);
+        setBirthdayNames(names);
+      } catch (e) {
+        setBirthdayNames([]);
+      }
+    })();
+  }, [identity]);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
@@ -189,7 +220,48 @@ export default function Home() {
     if (isFirstLoad || nearBottom) {
       bottomRef.current?.scrollIntoView({ behavior: isFirstLoad ? "auto" : "smooth" });
     }
+    if (!isFirstLoad) {
+      playChatDing();
+    }
   }, [messages]);
+
+  useEffect(() => {
+    if (!setAction) return;
+    if (pinnedMessages.length > 0) {
+      setAction(
+        <div className="chat-pinned-box" onClick={() => setShowPinnedModal(true)}>
+          {pinnedMessages.map((m) => {
+            const pinAttachment = m.attachment.length > 0 ? m.attachment[0] : null;
+            const pinIsImg = pinAttachment ? isImageAttachment(pinAttachment) : false;
+            return (
+              <div key={"pinned-row-" + m.id.toString()} className="chat-pinned-row">
+                <span className="chat-pinned-row-icon">📌</span>
+                <span className="chat-pinned-row-text">
+                  <span className="chat-pinned-row-sender">{m.senderName}: </span>
+                  {m.text || (m.shareTitle.length > 0 ? m.shareTitle[0] : pinAttachment ? "" : "Shared something")}
+                </span>
+                {pinAttachment && pinIsImg && (
+                  <button
+                    className="chat-pinned-photo-link"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxSrc(attachmentToUrl(pinAttachment));
+                    }}
+                    type="button"
+                  >
+                    📷 View photo
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      );
+    } else {
+      setAction(null);
+    }
+    return () => setAction(null);
+  }, [setAction, pinnedMessages]);
 
   const sendingRef = useRef(false);
 
@@ -246,8 +318,9 @@ export default function Home() {
       e.target.value = "";
       return;
     }
-    if (f.size > MAX_UPLOAD_BYTES) {
-      setError("File is too large (max ~3.3MB for now).");
+    const willBeCompressed = f.type.startsWith("image/") && f.type !== "image/gif";
+    if (!willBeCompressed && f.size > MAX_UPLOAD_BYTES) {
+      setError("File is too large (max ~1.8MB for now).");
       e.target.value = "";
       return;
     }
@@ -256,40 +329,15 @@ export default function Home() {
   };
 
   return (
-    <div className="chat-page">
+    <div className={"chat-page" + (birthdayNames.length > 0 ? " chat-page-birthday" : "")}>
+      {birthdayNames.length > 0 && (
+        <div className="chat-birthday-banner">
+          🎉 It{"\u2019"}s {birthdayNames.join(" & ")}{"\u2019"}s Birthday! 🎉
+        </div>
+      )}
       {activeSendEffects.map((e) => (
         <SendEffectOverlay key={e.uid} effectKey={e.type} onDone={() => removeSendEffect(e.uid)} />
       ))}
-      {pinnedMessages.length > 0 && (
-        <div className="chat-pinned-box" onClick={() => setShowPinnedModal(true)}>
-          {pinnedMessages.map((m) => {
-            const pinAttachment = m.attachment.length > 0 ? m.attachment[0] : null;
-            const pinIsImg = pinAttachment ? isImageAttachment(pinAttachment) : false;
-            return (
-              <div key={"pinned-row-" + m.id.toString()} className="chat-pinned-row">
-                <span className="chat-pinned-row-icon">📌</span>
-                <span className="chat-pinned-row-text">
-                  <span className="chat-pinned-row-sender">{m.senderName}: </span>
-                  {m.text || (m.shareTitle.length > 0 ? m.shareTitle[0] : pinAttachment ? "" : "Shared something")}
-                </span>
-                {pinAttachment && pinIsImg && (
-                  <button
-                    className="chat-pinned-photo-link"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setLightboxSrc(attachmentToUrl(pinAttachment));
-                    }}
-                    type="button"
-                  >
-                    📷 View photo
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
       {showPinnedModal && (
         <div className="chat-pinned-modal-overlay" onClick={() => setShowPinnedModal(false)}>
           <div className="chat-pinned-modal" onClick={(e) => e.stopPropagation()}>
@@ -350,15 +398,14 @@ export default function Home() {
           const attachment = m.attachment.length > 0 ? m.attachment[0] : null;
           const isImg = attachment ? isImageAttachment(attachment) : false;
           return (
+            <ChatBubbleSkin key={m.id.toString()} userId={m.sender} isMe={isMe} myShopProfile={myShopProfile}>
+              {(skinClass) => (
             <div
-              key={m.id.toString()}
               className={
                 "chat-message" +
                 (isMe ? " chat-message-me" : "") +
                 (m.isBanner ? " chat-message-banner" : "") +
-                (isMe && myShopProfile && myShopProfile.chatBubbleOwned && myShopProfile.chatBubbleSkin && myShopProfile.chatBubbleSkin !== "default"
-                  ? " shop-bubble-" + myShopProfile.chatBubbleSkin
-                  : "")
+                skinClass
               }
               style={{ position: "relative" }}
             >
@@ -383,6 +430,26 @@ export default function Home() {
                 </Link>
               ) : null}
               {m.text ? <div className="chat-message-text">{m.text}</div> : null}
+              {attachment && (() => {
+                const daysOld = (Date.now() - Number(m.timestamp) / 1_000_000) / (1000 * 60 * 60 * 24);
+                const daysRemaining = Math.max(0, Math.ceil(30 - daysOld));
+                return daysRemaining <= 7 ? (
+                  <div
+                    className="tree-rel"
+                    style={{
+                      background: "#fff3d6",
+                      border: "1px solid #f2b84c",
+                      borderRadius: 8,
+                      padding: "4px 8px",
+                      marginTop: 4,
+                      fontWeight: 700,
+                      color: "#a3591f",
+                    }}
+                  >
+                    ⚠️ Image expires in {daysRemaining} {daysRemaining === 1 ? "day" : "days"}
+                  </div>
+                ) : null;
+              })()}
               {attachment && isImg ? (
                 <img
                   className={"chat-attachment-image zoomable-image" + ((m.isBanner || m.isPinned) ? " chat-attachment-image-large" : "")}
@@ -394,6 +461,9 @@ export default function Home() {
               {attachment && !isImg ? (
                 <a className="chat-attachment-file" href={attachmentToUrl(attachment)} download={attachment.filename}>Attachment: {attachment.filename}</a>
               ) : null}
+              {!attachment && m.imageExpired && (
+                <div className="tree-rel" style={{ fontStyle: "italic" }}>🖼️ Image Expired</div>
+              )}
               <div className="chat-reaction-row">
                 <button
                   className={"chat-reaction-btn chat-reaction-btn-up" + (m.myReaction.length > 0 && m.myReaction[0] === true ? " chat-reaction-active" : "")}
@@ -429,6 +499,8 @@ export default function Home() {
                 </button>
               )}
             </div>
+              )}
+            </ChatBubbleSkin>
           );
         })}
         <div ref={bottomRef} />

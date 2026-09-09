@@ -5,6 +5,7 @@ import { createAuthActor } from "../auth.js";
 import { createAlbumsActor } from "../albums.js";
 import { fileToAttachment, attachmentToUrl, MAX_UPLOAD_BYTES } from "../chat.js";
 import Lightbox from "../components/Lightbox.jsx";
+import JSZip from "jszip";
 
 const IMAGE_TYPES = ["image/png", "image/jpeg"];
 
@@ -36,8 +37,30 @@ function AlbumPhotoCard({ meta, index, albumsActor, profile, onReact, onLove, on
 
   const isOwnPhoto = profile && meta.uploader.toString() === profile.id.toString();
 
+  const RETENTION_DAYS = 90;
+  const uploadedMs = Number(meta.timestamp) / 1_000_000;
+  const daysOld = (Date.now() - uploadedMs) / (1000 * 60 * 60 * 24);
+  const daysRemaining = Math.max(0, Math.ceil(RETENTION_DAYS - daysOld));
+  const nearingDeletion = daysRemaining <= 7;
+
   return (
     <div className="card" style={{ padding: 10 }}>
+      {nearingDeletion && (
+        <div
+          className="tree-rel"
+          style={{
+            background: "#fff3d6",
+            border: "1px solid #f2b84c",
+            borderRadius: 8,
+            padding: "4px 8px",
+            marginBottom: 8,
+            fontWeight: 700,
+            color: "#a3591f",
+          }}
+        >
+          ⚠️ Expires in {daysRemaining} {daysRemaining === 1 ? "day" : "days"} — download it soon!
+        </div>
+      )}
       {imgUrl ? (
         <img
           src={imgUrl}
@@ -105,6 +128,7 @@ export default function AlbumDetail() {
   const { identity, profile } = useAuth();
   const [albumsActor, setAlbumsActor] = useState(null);
   const [album, setAlbum] = useState(null);
+  const [zipping, setZipping] = useState(false);
   const [photoMetas, setPhotoMetas] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [inviteSel, setInviteSel] = useState("");
@@ -188,10 +212,6 @@ export default function AlbumDetail() {
         setError("Only PNG or JPG photos are supported — skipped " + f.name + ".");
         continue;
       }
-      if (f.size > MAX_UPLOAD_BYTES) {
-        setError("Photo too large (max ~1.7MB) — skipped " + f.name + ".");
-        continue;
-      }
       valid.push(f);
     }
     setPendingFiles((prev) => [...prev, ...valid]);
@@ -231,6 +251,46 @@ export default function AlbumDetail() {
       await refresh();
     } catch (e) {
       setError("Something went wrong. Please try again.");
+    }
+  };
+
+  const handleDownloadZip = async (scope) => {
+    if (!albumsActor || photoMetas.length === 0 || zipping) return;
+    const RETENTION_DAYS = 90;
+    const targets = photoMetas.filter((meta) => {
+      if (scope === "all") return true;
+      const uploadedMs = Number(meta.timestamp) / 1_000_000;
+      const daysOld = (Date.now() - uploadedMs) / (1000 * 60 * 60 * 24);
+      return RETENTION_DAYS - daysOld <= 7;
+    });
+    if (targets.length === 0) {
+      setError("No photos match that option right now.");
+      return;
+    }
+    setZipping(true);
+    setError(null);
+    try {
+      const zip = new JSZip();
+      for (const meta of targets) {
+        const result = await albumsActor.getPhotoImage(meta.id);
+        if (result.length > 0) {
+          const attachment = result[0];
+          zip.file(meta.id.toString() + "_" + attachment.filename, new Uint8Array(attachment.data));
+        }
+      }
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = (album ? album.name : "album") + "-photos.zip";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError("Something went wrong building the zip. Please try again.");
+    } finally {
+      setZipping(false);
     }
   };
 
@@ -363,6 +423,17 @@ export default function AlbumDetail() {
           <p className="tree-rel">Only the creator or contributors can add photos to this album.</p>
         )}
       </div>
+
+      {photoMetas.length > 0 && (
+        <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+          <button className="chat-send-button" onClick={() => handleDownloadZip("expiring")} disabled={zipping}>
+            {zipping ? "Zipping..." : "📦 Download Expiring Soon"}
+          </button>
+          <button className="chat-send-button" onClick={() => handleDownloadZip("all")} disabled={zipping}>
+            {zipping ? "Zipping..." : "📦 Download All Photos"}
+          </button>
+        </div>
+      )}
 
       {photoMetas.length === 0 ? (
         <p className="chat-empty">No photos yet.</p>

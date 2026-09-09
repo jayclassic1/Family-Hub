@@ -2,9 +2,14 @@ import Map "mo:core/Map";
 import Principal "mo:core/Principal";
 import Time "mo:core/Time";
 import Array "mo:core/Array";
+import Runtime "mo:core/Runtime";
 import Types "../shared/Types";
 
 persistent actor {
+
+  type CalendarActor = actor {
+    setBirthdayEvent : shared (Principal, Text, Nat, Nat) -> async Bool;
+  };
 
   type UserProfile = Types.UserProfile;
   type UserProfilePublic = Types.UserProfilePublic;
@@ -24,6 +29,14 @@ persistent actor {
   let users = Map.empty<Principal, UserProfile>();
   let banStates = Map.empty<Principal, AccessStatus>();
   var signupPassword : Text = "Blue16";
+  var websiteName : Text = "Family Hub";
+
+  // Kept as separate top-level maps (not fields on UserProfile) so this
+  // feature could be added without an upgrade-breaking change to the
+  // already-persisted UserProfile record shape.
+  type Birthday = { month : Nat; day : Nat };
+  let birthdays = Map.empty<Principal, Birthday>();
+  let ages = Map.empty<Principal, Nat>();
 
   func isAdmin(p : Principal) : Bool {
     switch (Map.get(users, Principal.compare, p)) {
@@ -51,11 +64,12 @@ persistent actor {
     }
   };
 
-  public shared ({ caller }) func register(username : Text, password : Text) : async Bool {
+  public shared ({ caller }) func register(username : Text, password : Text, siteName : Text) : async Bool {
     if (Principal.isAnonymous(caller)) {
       return false;
     };
-    if (password != signupPassword) {
+    let isFirstUser = Map.size(users) == 0;
+    if (not isFirstUser and password != signupPassword) {
       return false;
     };
 
@@ -65,15 +79,32 @@ persistent actor {
         let profile : UserProfile = {
           id = caller;
           var username = username;
-          var role = #member;
+          var role = if (isFirstUser) { #admin } else { #member };
           var gender = "";
           var isInLaw = false;
           created = Time.now();
         };
         Map.add(users, Principal.compare, caller, profile);
+        if (isFirstUser) {
+          signupPassword := password;
+          if (siteName != "") {
+            websiteName := siteName;
+          };
+        };
         true
       };
     }
+  };
+
+  public query func getWebsiteName() : async Text {
+    websiteName
+  };
+
+  public shared ({ caller }) func setWebsiteName(newName : Text) : async Bool {
+    if (not isAdmin(caller)) { return false };
+    if (newName == "") { return false };
+    websiteName := newName;
+    true
   };
 
   public shared ({ caller }) func claimAdminIfNoneExists() : async Bool {
@@ -111,12 +142,16 @@ persistent actor {
   public shared query func getUser(userId : Principal) : async ?UserProfilePublic {
     switch (Map.get(users, Principal.compare, userId)) {
       case (?profile) {
+        let bday = Map.get(birthdays, Principal.compare, userId);
         ?{
           id = profile.id;
           username = profile.username;
           role = profile.role;
           gender = profile.gender;
           isInLaw = profile.isInLaw;
+          birthdayMonth = switch (bday) { case (?b) { ?b.month }; case null { null } };
+          birthdayDay = switch (bday) { case (?b) { ?b.day }; case null { null } };
+          age = Map.get(ages, Principal.compare, userId);
           created = profile.created;
         }
       };
@@ -146,11 +181,52 @@ persistent actor {
     }
   };
 
+  public shared ({ caller }) func setBirthday(month : Nat, day : Nat) : async Bool {
+    if (Principal.isAnonymous(caller)) { return false };
+    if (month < 1 or month > 12 or day < 1 or day > 31) { return false };
+    switch (Map.get(users, Principal.compare, caller)) {
+      case (?profile) {
+        Map.add(birthdays, Principal.compare, caller, { month; day });
+        switch (Runtime.envVar("PUBLIC_CANISTER_ID:calendar")) {
+          case (?calendarId) {
+            let calendarActor : CalendarActor = actor (calendarId);
+            ignore await calendarActor.setBirthdayEvent(caller, profile.username, month, day);
+          };
+          case null {};
+        };
+        true
+      };
+      case null { false };
+    }
+  };
+
+  public shared ({ caller }) func setAge(age : Nat) : async Bool {
+    if (Principal.isAnonymous(caller)) { return false };
+    switch (Map.get(users, Principal.compare, caller)) {
+      case (?_profile) {
+        Map.add(ages, Principal.compare, caller, age);
+        true
+      };
+      case null { false };
+    }
+  };
+
   public query func getAllUsers() : async [UserProfilePublic] {
     Array.map<UserProfile, UserProfilePublic>(
       Array.fromIter<UserProfile>(Map.values(users)),
       func(p : UserProfile) : UserProfilePublic {
-        { id = p.id; username = p.username; role = p.role; gender = p.gender; isInLaw = p.isInLaw; created = p.created }
+        let bday = Map.get(birthdays, Principal.compare, p.id);
+        {
+          id = p.id;
+          username = p.username;
+          role = p.role;
+          gender = p.gender;
+          isInLaw = p.isInLaw;
+          birthdayMonth = switch (bday) { case (?b) { ?b.month }; case null { null } };
+          birthdayDay = switch (bday) { case (?b) { ?b.day }; case null { null } };
+          age = Map.get(ages, Principal.compare, p.id);
+          created = p.created;
+        }
       }
     )
   };

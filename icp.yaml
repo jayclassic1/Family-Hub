@@ -103,6 +103,10 @@ canisters:
     recipe:
       type: "@dfinity/motoko@v5.0.0"
 
+  - name: roulette
+    recipe:
+      type: "@dfinity/motoko@v5.0.0"
+
   - name: frontend
     recipe:
       type: "@dfinity/asset-canister@v2.2.1"

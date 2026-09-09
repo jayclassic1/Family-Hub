@@ -24,6 +24,8 @@ export const idlFactory = ({ IDL }) => {
     thumbsDownCount: IDL.Nat,
     myReaction: IDL.Opt(IDL.Bool),
     myLoveGiven: IDL.Bool,
+    isBanner: IDL.Bool,
+    imageExpired: IDL.Bool,
   });
   const GroupLoveEvent = IDL.Record({
     id: IDL.Nat,
@@ -43,7 +45,7 @@ export const idlFactory = ({ IDL }) => {
     listGroups: IDL.Func([], [IDL.Vec(Group)], []),
     getMyGroups: IDL.Func([], [IDL.Vec(Group)], []),
     getGroupMembers: IDL.Func([IDL.Nat], [IDL.Vec(IDL.Principal)], ["query"]),
-    sendGroupMessage: IDL.Func([IDL.Nat, IDL.Text, IDL.Opt(ChatAttachment)], [IDL.Nat], []),
+    sendGroupMessage: IDL.Func([IDL.Nat, IDL.Text, IDL.Opt(ChatAttachment), IDL.Bool], [IDL.Nat], []),
     getGroupMessages: IDL.Func([IDL.Nat], [IDL.Vec(GroupMessagePublic)], ["query"]),
     deleteGroupMessage: IDL.Func([IDL.Nat], [IDL.Bool], []),
     reactToGroupMessage: IDL.Func([IDL.Nat, IDL.Bool], [IDL.Bool], []),

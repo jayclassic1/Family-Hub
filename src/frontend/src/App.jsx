@@ -21,6 +21,7 @@ import ChessLobby from "./pages/games/ChessLobby.jsx";
 import ChessBoard from "./pages/games/ChessBoard.jsx";
 import ScrabbleLobby from "./pages/games/ScrabbleLobby.jsx";
 import ScrabbleBoard from "./pages/games/ScrabbleBoard.jsx";
+import RouletteTable from "./pages/games/RouletteTable.jsx";
 import CoinToss from "./pages/games/CoinToss.jsx";
 import RpsLobby from "./pages/games/RpsLobby.jsx";
 import RpsGame from "./pages/games/RpsGame.jsx";
@@ -84,6 +85,7 @@ export default function App() {
               <Route path="/games/chess/:gameId" element={<ChessBoard />} />
               <Route path="/games/scrabble" element={<ScrabbleLobby />} />
               <Route path="/games/scrabble/:gameId" element={<ScrabbleBoard />} />
+              <Route path="/games/roulette" element={<RouletteTable />} />
               <Route path="/games/coin-toss" element={<CoinToss />} />
               <Route path="/games/rock-paper-scissors" element={<RpsLobby />} />
               <Route path="/games/rock-paper-scissors/important" element={<RpsImportant />} />

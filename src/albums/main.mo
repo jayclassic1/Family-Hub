@@ -4,6 +4,7 @@ import Array "mo:core/Array";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
+import Timer "mo:core/Timer";
 import Types "../shared/Types";
 
 persistent actor {
@@ -44,6 +45,67 @@ persistent actor {
   var photoCounter : Nat = 0;
 
   let likes = Map.empty<Nat, Map.Map<Principal, Bool>>();
+
+  // Photos older than this are auto-deleted to keep canister storage costs
+  // down, since images are the single biggest driver of stable-memory rent.
+  // The retention window is intentionally longer than chat attachments
+  // (which last 30 days) since album photos are meant as longer-term memories.
+  let NINETY_DAYS_NS : Int = 90 * 24 * 60 * 60 * 1_000_000_000;
+
+  func cleanupExpiredPhotos() : async () {
+    let cutoff = Time.now() - NINETY_DAYS_NS;
+    let expired = Array.filter<AlbumPhotoInternal>(
+      Array.fromIter<AlbumPhotoInternal>(Map.values(photos)),
+      func(p : AlbumPhotoInternal) : Bool { p.timestamp < cutoff }
+    );
+    for (p in expired.vals()) {
+      ignore Map.remove(photos, Nat.compare, p.id);
+      ignore Map.remove(likes, Nat.compare, p.id);
+    };
+  };
+
+  let lastUploadTime = Map.empty<Nat, Int>();
+
+  // An album with no new uploads (falling back to its creation time if it
+  // has never had one) for this long is considered abandoned and removed
+  // along with whatever photos/likes it still has.
+  let EIGHT_MONTHS_NS : Int = 8 * 30 * 24 * 60 * 60 * 1_000_000_000;
+
+  func cleanupInactiveAlbums() : async () {
+    let cutoff = Time.now() - EIGHT_MONTHS_NS;
+    let stale = Array.filter<Album>(
+      Array.fromIter<Album>(Map.values(albums)),
+      func(a : Album) : Bool {
+        let lastActivity = switch (Map.get(lastUploadTime, Nat.compare, a.id)) {
+          case (?t) { t };
+          case null { a.created };
+        };
+        lastActivity < cutoff
+      }
+    );
+    for (a in stale.vals()) {
+      ignore Map.remove(albums, Nat.compare, a.id);
+      ignore Map.remove(lastUploadTime, Nat.compare, a.id);
+      let photosToRemove = Array.filter<AlbumPhotoInternal>(
+        Array.fromIter<AlbumPhotoInternal>(Map.values(photos)),
+        func(p : AlbumPhotoInternal) : Bool { p.albumId == a.id }
+      );
+      for (p in photosToRemove.vals()) {
+        ignore Map.remove(photos, Nat.compare, p.id);
+        ignore Map.remove(likes, Nat.compare, p.id);
+      };
+    };
+  };
+
+  // Re-registered on every init/upgrade, since timer registrations do not
+  // themselves persist in stable memory -- this runs once a day.
+  ignore Timer.recurringTimer<system>(
+    #seconds(86400),
+    func() : async () {
+      await cleanupExpiredPhotos();
+      await cleanupInactiveAlbums();
+    },
+  );
 
   // New thumbs up/down reaction system. Bool = true for thumbs up,
   // false for thumbs down. One reaction per user per photo, permanent.
@@ -288,6 +350,7 @@ persistent actor {
       timestamp = Time.now();
     };
     Map.add(photos, Nat.compare, id, p);
+    Map.add(lastUploadTime, Nat.compare, albumId, Time.now());
     photoCounter += 1;
     id
   };

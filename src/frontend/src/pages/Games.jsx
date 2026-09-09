@@ -18,6 +18,11 @@ export default function Games() {
           <div className="card-title">Scrabble</div>
           <div className="card-description">Honor-system scoring, 2-4 players.</div>
         </Link>
+        <Link to="/games/roulette" className="card tree-card">
+          <div className="card-emoji">🎰</div>
+          <div className="card-title">Roulette</div>
+          <div className="card-description">One shared table, gamble your Love.</div>
+        </Link>
         <Link to="/games/rock-paper-scissors" className="card tree-card">
           <div className="card-emoji">✂️</div>
           <div className="card-title">Rock Paper Scissors</div>

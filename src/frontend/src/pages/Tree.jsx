@@ -11,7 +11,6 @@ export default function Tree() {
   const [users, setUsers] = useState([]);
   const [edges, setEdges] = useState([]);
   const [error, setError] = useState(null);
-  const [claiming, setClaiming] = useState(false);
 
   const [parentSel, setParentSel] = useState("");
   const [childSel, setChildSel] = useState("");
@@ -44,30 +43,10 @@ export default function Tree() {
   }, [refresh]);
 
   const isAdmin = profile && isAdminRole(profile.role);
-  const anyAdminExists = users.some((u) => isAdminRole(u.role));
 
   const nameOf = (principalText) => {
     const u = users.find((x) => x.id.toString() === principalText);
     return u ? u.username : principalText;
-  };
-
-  const handleClaimAdmin = async () => {
-    if (!authActor) return;
-    setClaiming(true);
-    setError(null);
-    try {
-      const ok = await authActor.claimAdminIfNoneExists();
-      if (!ok) {
-        setError("Could not claim admin — one may already exist.");
-      } else {
-        await reloadProfile();
-      }
-      await refresh();
-    } catch (e) {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setClaiming(false);
-    }
   };
 
   const handleAddParentChild = async (e) => {
@@ -136,15 +115,6 @@ export default function Tree() {
     <div>
       <h1 className="page-title">Family Tree</h1>
       <p className="page-subtitle">Tap a name to view their profile.</p>
-
-      {!anyAdminExists && !isAdmin && (
-        <div className="tree-claim-banner">
-          No admin has been set up yet. Anyone can claim it once.
-          <button className="auth-button" style={{ marginTop: 8 }} onClick={handleClaimAdmin} disabled={claiming}>
-            {claiming ? "Claiming..." : "Claim admin"}
-          </button>
-        </div>
-      )}
 
       {isAdmin && (
         <div className="tree-admin-panel">

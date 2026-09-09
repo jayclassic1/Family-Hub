@@ -22,6 +22,7 @@ export const idlFactory = ({ IDL }) => {
     animated: IDL.Bool,
     isBanner: IDL.Bool,
     isPinned: IDL.Bool,
+    imageExpired: IDL.Bool,
   });
   const LoveEvent = IDL.Record({
     id: IDL.Nat,

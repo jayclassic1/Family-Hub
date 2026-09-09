@@ -4,6 +4,7 @@ import Array "mo:core/Array";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
+import Timer "mo:core/Timer";
 import Types "../shared/Types";
 
 persistent actor {
@@ -24,6 +25,7 @@ persistent actor {
 
   type WalletActor = actor {
     transferLoveBetween : shared (Principal, Principal, Nat) -> async Bool;
+    spendLoveFor : shared (Principal, Nat) -> async Bool;
   };
 
   type ShopProfile = {
@@ -52,6 +54,29 @@ persistent actor {
   let members = Map.empty<Nat, Map.Map<Principal, Bool>>();
 
   let messages = Map.empty<Nat, GroupMessage>();
+  let bannerMessageIds = Map.empty<Nat, Bool>();
+
+  // Attachments older than this are cleared to keep storage costs down;
+  // the message text itself is kept, with a placeholder shown in its place.
+  let THIRTY_DAYS_NS : Int = 30 * 24 * 60 * 60 * 1_000_000_000;
+  let expiredImageIds = Map.empty<Nat, Bool>();
+
+  func cleanupExpiredImages() : async () {
+    let cutoff = Time.now() - THIRTY_DAYS_NS;
+    let toExpire = Array.filter<GroupMessage>(
+      Array.fromIter<GroupMessage>(Map.values(messages)),
+      func(m : GroupMessage) : Bool { m.attachment != null and m.timestamp < cutoff }
+    );
+    for (m in toExpire.vals()) {
+      let updated = { m with attachment = null };
+      Map.add(messages, Nat.compare, m.id, updated);
+      Map.add(expiredImageIds, Nat.compare, m.id, true);
+    };
+  };
+
+  // Re-registered on every init/upgrade, since timer registrations do not
+  // themselves persist in stable memory -- this runs once a day.
+  ignore Timer.recurringTimer<system>(#seconds(86400), cleanupExpiredImages);
 
   let reactions = Map.empty<Nat, Map.Map<Principal, Bool>>();
 
@@ -112,6 +137,8 @@ persistent actor {
       thumbsDownCount = thumbsDownCount(m.id);
       myReaction = myReaction(m.id, caller);
       myLoveGiven = myLoveGivenFor(m.id, caller);
+      isBanner = switch (Map.get(bannerMessageIds, Nat.compare, m.id)) { case (?b) { b }; case null { false } };
+      imageExpired = Map.get(expiredImageIds, Nat.compare, m.id) != null;
     }
   };
   var messageCounter : Nat = 0;
@@ -320,7 +347,7 @@ persistent actor {
     }
   };
 
-  public shared ({ caller }) func sendGroupMessage(groupId : Nat, text : Text, attachment : ?ChatAttachment) : async Nat {
+  public shared ({ caller }) func sendGroupMessage(groupId : Nat, text : Text, attachment : ?ChatAttachment, isBanner : Bool) : async Nat {
     if (not isMember(groupId, caller)) {
       Runtime.trap("Not a member of this group");
     };
@@ -337,6 +364,17 @@ persistent actor {
       case null { "Unknown" };
     };
 
+    var actualBanner = false;
+    if (isBanner) {
+      switch (Runtime.envVar("PUBLIC_CANISTER_ID:wallet")) {
+        case (?walletId) {
+          let w : WalletActor = actor (walletId);
+          actualBanner := await w.spendLoveFor(caller, 1);
+        };
+        case null {};
+      };
+    };
+
     let id = messageCounter;
     let message : GroupMessage = {
       id;
@@ -348,6 +386,9 @@ persistent actor {
       timestamp = Time.now();
     };
     Map.add(messages, Nat.compare, id, message);
+    if (actualBanner) {
+      Map.add(bannerMessageIds, Nat.compare, id, true);
+    };
     messageCounter += 1;
     id
   };

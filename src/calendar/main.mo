@@ -9,6 +9,7 @@ import Types "../shared/Types";
 persistent actor {
 
   type FamilyEvent = Types.FamilyEvent;
+  type FamilyEventPublic = Types.FamilyEventPublic;
   type EventKind = Types.EventKind;
   type Visibility = Types.Visibility;
   type RsvpResponse = Types.RsvpResponse;
@@ -34,6 +35,12 @@ persistent actor {
 
   let events = Map.empty<Nat, FamilyEvent>();
   var eventCounter : Nat = 0;
+  let birthdayEventIds = Map.empty<Principal, Nat>();
+  let rsvpEnabledEventIds = Map.empty<Nat, Bool>();
+
+  func toPublicEvent(e : FamilyEvent) : FamilyEventPublic {
+    { e with allowRsvp = switch (Map.get(rsvpEnabledEventIds, Nat.compare, e.id)) { case (?true) { true }; case _ { false } } }
+  };
 
   let rsvps = Map.empty<Nat, Map.Map<Principal, RsvpResponse>>();
 
@@ -128,7 +135,8 @@ persistent actor {
     description : Text,
     kind : EventKind,
     visibility : Visibility,
-    coverPhoto : ?ChatAttachment
+    coverPhoto : ?ChatAttachment,
+    allowRsvp : Bool
   ) : async Nat {
     if (Principal.isAnonymous(caller)) {
       Runtime.trap("Not signed in");
@@ -147,8 +155,71 @@ persistent actor {
       created = Time.now();
     };
     Map.add(events, Nat.compare, id, e);
+    if (allowRsvp) {
+      Map.add(rsvpEnabledEventIds, Nat.compare, id, true);
+    };
     eventCounter += 1;
     id
+  };
+
+  // Called only by the auth canister when a member sets or updates their
+  // birthday, so it can keep a recurring annual calendar event in sync.
+  public shared ({ caller }) func setBirthdayEvent(owner : Principal, ownerName : Text, month : Nat, day : Nat) : async Bool {
+    switch (Runtime.envVar("PUBLIC_CANISTER_ID:auth")) {
+      case (?authId) {
+        if (Principal.toText(caller) != authId) { return false };
+      };
+      case null { return false };
+    };
+    let kind : EventKind = #annual { month; day };
+    let title = ownerName # "'s Birthday";
+    switch (Map.get(birthdayEventIds, Principal.compare, owner)) {
+      case (?existingId) {
+        switch (Map.get(events, Nat.compare, existingId)) {
+          case (?e) {
+            let updated = { e with kind; title };
+            Map.add(events, Nat.compare, existingId, updated);
+          };
+          case null {
+            let id = eventCounter;
+            let e : FamilyEvent = {
+              id;
+              creator = owner;
+              creatorName = ownerName;
+              title;
+              description = "";
+              kind;
+              visibility = #everyone;
+              coverPhoto = null;
+              created = Time.now();
+            };
+            Map.add(events, Nat.compare, id, e);
+            Map.add(birthdayEventIds, Principal.compare, owner, id);
+            Map.add(rsvpEnabledEventIds, Nat.compare, id, true);
+            eventCounter += 1;
+          };
+        };
+      };
+      case null {
+        let id = eventCounter;
+        let e : FamilyEvent = {
+          id;
+          creator = owner;
+          creatorName = ownerName;
+          title;
+          description = "";
+          kind;
+          visibility = #everyone;
+          coverPhoto = null;
+          created = Time.now();
+        };
+        Map.add(events, Nat.compare, id, e);
+        Map.add(birthdayEventIds, Principal.compare, owner, id);
+        Map.add(rsvpEnabledEventIds, Nat.compare, id, true);
+        eventCounter += 1;
+      };
+    };
+    true
   };
 
   func isCallerAdmin(caller : Principal) : async Bool {
@@ -177,6 +248,7 @@ persistent actor {
         };
         ignore Map.remove(events, Nat.compare, eventId);
         ignore Map.remove(rsvps, Nat.compare, eventId);
+        ignore Map.remove(rsvpEnabledEventIds, Nat.compare, eventId);
         let commentsToRemove = Array.filter<EventComment>(
           Array.fromIter<EventComment>(Map.values(comments)),
           func(c : EventComment) : Bool { c.eventId == eventId }
@@ -197,16 +269,17 @@ persistent actor {
     }
   };
 
-  public query ({ caller }) func getVisibleEvents() : async [FamilyEvent] {
-    Array.filter<FamilyEvent>(
+  public query ({ caller }) func getVisibleEvents() : async [FamilyEventPublic] {
+    let visible = Array.filter<FamilyEvent>(
       Array.fromIter<FamilyEvent>(Map.values(events)),
       func(e : FamilyEvent) : Bool { canView(e, caller) }
-    )
+    );
+    Array.map<FamilyEvent, FamilyEventPublic>(visible, toPublicEvent)
   };
 
-  public query ({ caller }) func getEvent(eventId : Nat) : async ?FamilyEvent {
+  public query ({ caller }) func getEvent(eventId : Nat) : async ?FamilyEventPublic {
     switch (Map.get(events, Nat.compare, eventId)) {
-      case (?e) { if (canView(e, caller)) { ?e } else { null } };
+      case (?e) { if (canView(e, caller)) { ?toPublicEvent(e) } else { null } };
       case null { null };
     }
   };

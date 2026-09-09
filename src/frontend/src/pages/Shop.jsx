@@ -4,6 +4,7 @@ import { createShopActor, SHOP_ITEMS, NAME_COLORS, NAME_FONTS, LOVED_EFFECTS, SE
 import { createWalletActor } from "../walletApi.js";
 import { fileToAttachment, attachmentToUrl, MAX_UPLOAD_BYTES } from "../chat.js";
 import { Link } from "react-router-dom";
+import DailyLoveClaim from "../components/DailyLoveClaim.jsx";
 
 const IMAGE_TYPES = ["image/png", "image/jpeg"];
 
@@ -345,7 +346,7 @@ export default function Shop() {
     <div>
       <h1 className="page-title">💗 Love Shop</h1>
       <p className="page-subtitle">Spend your Love on cosmetics and flair.</p>
-      <Link to="/shop/marketplace" className="chat-send-button" style={{ display: "inline-block", textDecoration: "none", marginBottom: 16 }}>
+      <Link to="/shop/marketplace" className="chat-send-button" style={{ display: "inline-block", textDecoration: "none", marginBottom: 16, marginRight: 12 }}>
         🛍️ Browse the Marketplace
       </Link>
 
@@ -354,6 +355,8 @@ export default function Shop() {
           💗 {loveBalance.toString()} Love
         </div>
       )}
+
+      <DailyLoveClaim onClaimed={refresh} />
 
       <p className="tree-rel" style={{ marginBottom: 20 }}>
         Note: purchases here unlock and let you customize each item, but showing them everywhere across the app (chat, profile, etc.) is still being wired up.

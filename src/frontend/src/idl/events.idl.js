@@ -23,6 +23,7 @@ export const idlFactory = ({ IDL }) => {
     visibility: Visibility,
     coverPhoto: IDL.Opt(ChatAttachment),
     created: IDL.Int,
+    allowRsvp: IDL.Bool,
   });
   const RsvpEntry = IDL.Record({ user: IDL.Principal, response: RsvpResponse });
   const EventComment = IDL.Record({
@@ -53,7 +54,7 @@ export const idlFactory = ({ IDL }) => {
     timestamp: IDL.Int,
   });
   return IDL.Service({
-    createEvent: IDL.Func([IDL.Text, IDL.Text, EventKind, Visibility, IDL.Opt(ChatAttachment)], [IDL.Nat], []),
+    createEvent: IDL.Func([IDL.Text, IDL.Text, EventKind, Visibility, IDL.Opt(ChatAttachment), IDL.Bool], [IDL.Nat], []),
     deleteEvent: IDL.Func([IDL.Nat], [IDL.Bool], []),
     getVisibleEvents: IDL.Func([], [IDL.Vec(FamilyEvent)], ["query"]),
     getEvent: IDL.Func([IDL.Nat], [IDL.Opt(FamilyEvent)], ["query"]),

@@ -11,6 +11,11 @@ export function AuthProvider({ children }) {
   const [principal, setPrincipal] = useState(null);
   const [actor, setActor] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [websiteName, setWebsiteName] = useState("Family Hub");
+
+  useEffect(() => {
+    document.title = websiteName;
+  }, [websiteName]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -27,6 +32,16 @@ export function AuthProvider({ children }) {
       setPrincipal(null);
       setProfile(null);
     }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const anon = await createAuthActor();
+        const name = await anon.getWebsiteName();
+        if (name) setWebsiteName(name);
+      } catch (e) {}
+    })();
   }, []);
 
   useEffect(() => {
@@ -94,13 +109,17 @@ export function AuthProvider({ children }) {
   );
 
   const register = useCallback(
-    async (username, password) => {
+    async (username, password, siteName) => {
       if (!actor || !identity) return false;
       setError(null);
       try {
-        const ok = await actor.register(username, password);
+        const ok = await actor.register(username, password, siteName || "");
         if (ok) {
           await applyIdentity(identity);
+          try {
+            const updatedName = await actor.getWebsiteName();
+            if (updatedName) setWebsiteName(updatedName);
+          } catch (e) {}
         } else {
           setError("Registration failed — wrong signup password, or that account may already exist.");
         }
@@ -113,6 +132,14 @@ export function AuthProvider({ children }) {
     [actor, identity, applyIdentity]
   );
 
+  const refreshWebsiteName = useCallback(async () => {
+    try {
+      const a = actor || (await createAuthActor());
+      const name = await a.getWebsiteName();
+      if (name) setWebsiteName(name);
+    } catch (e) {}
+  }, [actor]);
+
   const reloadProfile = useCallback(async () => {
     if (!authClient) return;
     const id = await authClient.getIdentity();
@@ -123,6 +150,7 @@ export function AuthProvider({ children }) {
     identity,
     principal,
     profile,
+    websiteName,
     loading,
     error,
     isLoggedIn: !!principal,
@@ -132,6 +160,7 @@ export function AuthProvider({ children }) {
     logout,
     register,
     reloadProfile,
+    refreshWebsiteName,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

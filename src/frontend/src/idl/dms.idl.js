@@ -24,6 +24,7 @@ export const idlFactory = ({ IDL }) => {
     thumbsDownCount: IDL.Nat,
     myReaction: IDL.Opt(IDL.Bool),
     myLoveGiven: IDL.Bool,
+    imageExpired: IDL.Bool,
   });
   const ConversationSummary = IDL.Record({
     otherUser: IDL.Principal,

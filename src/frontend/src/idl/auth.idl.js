@@ -6,6 +6,9 @@ export const idlFactory = ({ IDL }) => {
     role: Role,
     gender: IDL.Text,
     isInLaw: IDL.Bool,
+    birthdayMonth: IDL.Opt(IDL.Nat),
+    birthdayDay: IDL.Opt(IDL.Nat),
+    age: IDL.Opt(IDL.Nat),
     created: IDL.Int,
   });
   const AccessStatus = IDL.Record({
@@ -19,7 +22,9 @@ export const idlFactory = ({ IDL }) => {
     blockedUntil: IDL.Opt(IDL.Int),
   });
   return IDL.Service({
-    register: IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+    register: IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Bool], []),
+    getWebsiteName: IDL.Func([], [IDL.Text], ["query"]),
+    setWebsiteName: IDL.Func([IDL.Text], [IDL.Bool], []),
     claimAdminIfNoneExists: IDL.Func([], [IDL.Bool], []),
     isValidUser: IDL.Func([IDL.Principal], [IDL.Bool], ["query"]),
     getUser: IDL.Func([IDL.Principal], [IDL.Opt(UserProfilePublic)], ["query"]),
@@ -27,12 +32,15 @@ export const idlFactory = ({ IDL }) => {
     getMyAccessStatus: IDL.Func([], [AccessStatus], ["query"]),
     setGender: IDL.Func([IDL.Text], [IDL.Bool], []),
     setIsInLaw: IDL.Func([IDL.Bool], [IDL.Bool], []),
+    setBirthday: IDL.Func([IDL.Nat, IDL.Nat], [IDL.Bool], []),
+    setAge: IDL.Func([IDL.Nat], [IDL.Bool], []),
     adminSetSignupPassword: IDL.Func([IDL.Text], [IDL.Bool], []),
     adminGetSignupPassword: IDL.Func([], [IDL.Opt(IDL.Text)], ["query"]),
     adminBan: IDL.Func([IDL.Principal], [IDL.Bool], []),
     adminUnban: IDL.Func([IDL.Principal], [IDL.Bool], []),
     adminBlock: IDL.Func([IDL.Principal, IDL.Nat], [IDL.Bool], []),
     adminUnblock: IDL.Func([IDL.Principal], [IDL.Bool], []),
+    adminDeleteUser: IDL.Func([IDL.Principal], [IDL.Bool], []),
     adminListAccessStatuses: IDL.Func([], [IDL.Vec(UserAccessInfo)], ["query"]),
   });
 };

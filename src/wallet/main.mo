@@ -1,5 +1,6 @@
 import Map "mo:core/Map";
 import Nat "mo:core/Nat";
+import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
@@ -34,6 +35,12 @@ persistent actor {
 
   // Private "Love" currency balance, earned through engagement.
   let loveBalances = Map.empty<Principal, Nat>();
+
+  // Daily free Love claim tracking. Unclaimed days accumulate, up to a cap.
+  let lastDailyClaim = Map.empty<Principal, Int>();
+  let DAILY_LOVE_AMOUNT : Nat = 1;
+  let MAX_DAILY_LOVE_CAP : Nat = 30;
+  let ONE_DAY_NS : Int = 24 * 60 * 60 * 1_000_000_000;
 
   func loveBalanceOf(p : Principal) : Nat {
     switch (Map.get(loveBalances, Principal.compare, p)) {
@@ -217,6 +224,36 @@ persistent actor {
     let current = loveBalanceOf(target);
     Map.add(loveBalances, Principal.compare, target, current + amount);
     true
+  };
+
+  func lastClaimOf(p : Principal) : Int {
+    switch (Map.get(lastDailyClaim, Principal.compare, p)) {
+      case (?t) { t };
+      case null { 0 };
+    };
+  };
+
+  func claimableAmount(caller : Principal) : Nat {
+    let now = Time.now();
+    let elapsedNs = now - lastClaimOf(caller);
+    if (elapsedNs < ONE_DAY_NS) { return 0 };
+    let days = Int.abs(elapsedNs) / Int.abs(ONE_DAY_NS);
+    if (days > MAX_DAILY_LOVE_CAP) { MAX_DAILY_LOVE_CAP } else { days };
+  };
+
+  public shared ({ caller }) func claimDailyLove() : async Nat {
+    if (Principal.isAnonymous(caller)) { return 0 };
+    let amount = claimableAmount(caller);
+    if (amount == 0) { return 0 };
+    let current = loveBalanceOf(caller);
+    Map.add(loveBalances, Principal.compare, caller, current + amount);
+    Map.add(lastDailyClaim, Principal.compare, caller, Time.now());
+    amount
+  };
+
+  public query ({ caller }) func canClaimDailyLove() : async Nat {
+    if (Principal.isAnonymous(caller)) { return 0 };
+    claimableAmount(caller)
   };
 
   public shared ({ caller }) func spendLove(amount : Nat) : async Bool {

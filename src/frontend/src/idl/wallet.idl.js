@@ -58,5 +58,7 @@ export const idlFactory = ({ IDL }) => {
     transferLove: IDL.Func([IDL.Principal, IDL.Nat], [IDL.Bool], []),
     transferLoveBetween: IDL.Func([IDL.Principal, IDL.Principal, IDL.Nat], [IDL.Bool], []),
     getMyLove: IDL.Func([], [IDL.Nat], ["query"]),
+    claimDailyLove: IDL.Func([], [IDL.Nat], []),
+    canClaimDailyLove: IDL.Func([], [IDL.Nat], ["query"]),
   });
 };

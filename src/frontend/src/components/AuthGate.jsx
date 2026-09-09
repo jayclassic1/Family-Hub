@@ -2,8 +2,15 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { createAuthActor } from "../auth.js";
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 export default function AuthGate({ children }) {
-  const { loading, isLoggedIn, needsRegistration, login, loginWithPassword, register, error, identity, logout, profile, reloadProfile } = useAuth();
+  const { loading, isLoggedIn, needsRegistration, login, loginWithPassword, register, error, identity, logout, profile, reloadProfile, websiteName } = useAuth();
+  const [isFirstEverUser, setIsFirstEverUser] = useState(false);
+  const [siteName, setSiteName] = useState("");
   const [username, setUsername] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -11,6 +18,9 @@ export default function AuthGate({ children }) {
   const [genderSubmitting, setGenderSubmitting] = useState(false);
   const [selectedGender, setSelectedGender] = useState(null);
   const [selectedInLaw, setSelectedInLaw] = useState(null);
+  const [selectedBirthMonth, setSelectedBirthMonth] = useState("");
+  const [selectedBirthDay, setSelectedBirthDay] = useState("");
+  const [birthdaySubmitting, setBirthdaySubmitting] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordMode, setPasswordMode] = useState("login");
   const [pwUsername, setPwUsername] = useState("");
@@ -22,6 +32,19 @@ export default function AuthGate({ children }) {
       setUsername(pwUsername);
     }
   }, [needsRegistration, pwUsername, username]);
+
+  useEffect(() => {
+    if (!identity || !needsRegistration) return;
+    (async () => {
+      try {
+        const a = await createAuthActor(identity);
+        const allUsers = await a.getAllUsers();
+        setIsFirstEverUser(allUsers.length === 0);
+      } catch (e) {
+        setIsFirstEverUser(false);
+      }
+    })();
+  }, [identity, needsRegistration]);
 
   useEffect(() => {
     if (!identity || needsRegistration) {
@@ -48,17 +71,20 @@ export default function AuthGate({ children }) {
       <div className="auth-screen">
         <div className="auth-card">
           <div className="auth-emoji">🏡</div>
-          <h1>Chitze Chat</h1>
+          <h1>{websiteName}</h1>
           {!showPasswordForm ? (
             <>
               <button className="auth-button" type="button" onClick={() => setShowPasswordForm(true)}>
                 Login/Create
               </button>
-              <button className="auth-button" onClick={login} style={{ marginTop: 10 }}>
+              <p className="tree-rel" style={{ margin: "10px 0" }}>
+                or
+              </p>
+              <button className="auth-button" onClick={login}>
                 Login with Internet Identity
               </button>
-              <p className="tree-rel" style={{ marginTop: 6 }}>
-                Recommended — more secure, nothing to remember or lose.
+              <p className="tree-rel" style={{ marginTop: 10 }}>
+                (Not Recommended — More Complex)
               </p>
             </>
           ) : (
@@ -178,15 +204,39 @@ export default function AuthGate({ children }) {
               No
             </button>
           </div>
+          <p>When’s your birthday?</p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 16 }}>
+            <select
+              className="auth-input"
+              value={selectedBirthMonth}
+              onChange={(e) => setSelectedBirthMonth(e.target.value)}
+            >
+              <option value="" disabled>Month</option>
+              {MONTH_NAMES.map((name, i) => (
+                <option key={i} value={i + 1}>{name}</option>
+              ))}
+            </select>
+            <select
+              className="auth-input"
+              value={selectedBirthDay}
+              onChange={(e) => setSelectedBirthDay(e.target.value)}
+            >
+              <option value="" disabled>Day</option>
+              {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
           <button
             className="auth-button"
-            disabled={genderSubmitting || !selectedGender || selectedInLaw === null}
+            disabled={genderSubmitting || !selectedGender || selectedInLaw === null || !selectedBirthMonth || !selectedBirthDay}
             onClick={async () => {
               setGenderSubmitting(true);
               try {
                 const a = await createAuthActor(identity);
                 await a.setGender(selectedGender);
                 await a.setIsInLaw(selectedInLaw);
+                await a.setBirthday(Number(selectedBirthMonth), Number(selectedBirthDay));
                 await reloadProfile();
               } finally {
                 setGenderSubmitting(false);
@@ -201,25 +251,94 @@ export default function AuthGate({ children }) {
     );
   }
 
+  const needsBirthday =
+    !needsRegistration && !needsGenderClassification && profile &&
+    profile.birthdayMonth.length === 0;
+
+  if (needsBirthday) {
+    return (
+      <div className="auth-screen">
+        <div className="auth-card">
+          <div className="auth-emoji">🎂</div>
+          <h1>One more thing</h1>
+          <p>When’s your birthday? We’ll add it to the family calendar every year.</p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 16 }}>
+            <select
+              className="auth-input"
+              value={selectedBirthMonth}
+              onChange={(e) => setSelectedBirthMonth(e.target.value)}
+            >
+              <option value="" disabled>Month</option>
+              {MONTH_NAMES.map((name, i) => (
+                <option key={i} value={i + 1}>{name}</option>
+              ))}
+            </select>
+            <select
+              className="auth-input"
+              value={selectedBirthDay}
+              onChange={(e) => setSelectedBirthDay(e.target.value)}
+            >
+              <option value="" disabled>Day</option>
+              {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            className="auth-button"
+            disabled={birthdaySubmitting || !selectedBirthMonth || !selectedBirthDay}
+            onClick={async () => {
+              setBirthdaySubmitting(true);
+              try {
+                const a = await createAuthActor(identity);
+                await a.setBirthday(Number(selectedBirthMonth), Number(selectedBirthDay));
+                await reloadProfile();
+              } finally {
+                setBirthdaySubmitting(false);
+              }
+            }}
+          >
+            {birthdaySubmitting ? "Saving..." : "Continue"}
+          </button>
+          {error && <p className="auth-error">{error}</p>}
+        </div>
+      </div>
+    );
+  }
+
   if (needsRegistration) {
     return (
       <div className="auth-screen">
         <div className="auth-card">
-          <div className="auth-emoji">👋</div>
-          <h1>Welcome!</h1>
-          <p>Pick a name your family will see, and enter the family signup password.</p>
+          <div className="auth-emoji">{isFirstEverUser ? "🎉" : "👋"}</div>
+          <h1>{isFirstEverUser ? "Set up your family site!" : "Welcome!"}</h1>
+          <p>
+            {isFirstEverUser
+              ? "You're the first one here — name your site, pick a family password for everyone else to sign up with, and choose your own name."
+              : "Pick a name your family will see, and enter the family signup password."}
+          </p>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
               if (!username.trim() || !signupPassword) return;
+              if (isFirstEverUser && !siteName.trim()) return;
               setSubmitting(true);
               try {
-                await register(username.trim(), signupPassword);
+                await register(username.trim(), signupPassword, isFirstEverUser ? siteName.trim() : "");
               } finally {
                 setSubmitting(false);
               }
             }}
           >
+            {isFirstEverUser && (
+              <input
+                className="auth-input"
+                value={siteName}
+                onChange={(e) => setSiteName(e.target.value)}
+                placeholder="Name your site (e.g. The Smith Family Hub)"
+                disabled={submitting}
+              />
+            )}
             <input
               className="auth-input"
               value={username}

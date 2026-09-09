@@ -35,6 +35,9 @@ module {
     role : { #admin; #member };
     gender : Text;
     isInLaw : Bool;
+    birthdayMonth : ?Nat;
+    birthdayDay : ?Nat;
+    age : ?Nat;
     created : Int;
   };
 
@@ -102,6 +105,7 @@ module {
     animated : Bool;
     isBanner : Bool;
     isPinned : Bool;
+    imageExpired : Bool;
   };
 
   public type DmMessage = {
@@ -125,6 +129,7 @@ module {
     thumbsDownCount : Nat;
     myReaction : ?Bool;
     myLoveGiven : Bool;
+    imageExpired : Bool;
   };
 
   public type RelationType = { #parent; #spouse };
@@ -167,6 +172,8 @@ module {
     thumbsDownCount : Nat;
     myReaction : ?Bool;
     myLoveGiven : Bool;
+    isBanner : Bool;
+    imageExpired : Bool;
   };
 
   public type Poll = {
@@ -230,6 +237,19 @@ module {
     visibility : Visibility;
     coverPhoto : ?ChatAttachment;
     created : Int;
+  };
+
+  public type FamilyEventPublic = {
+    id : EventId;
+    creator : UserId;
+    creatorName : Text;
+    title : Text;
+    description : Text;
+    kind : EventKind;
+    visibility : Visibility;
+    coverPhoto : ?ChatAttachment;
+    created : Int;
+    allowRsvp : Bool;
   };
 
   public type RsvpEntry = {

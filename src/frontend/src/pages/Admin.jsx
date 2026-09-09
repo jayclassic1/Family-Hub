@@ -3,11 +3,12 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { createAuthActor } from "../auth.js";
 
 export default function Admin() {
-  const { identity, profile } = useAuth();
+  const { identity, profile, websiteName, refreshWebsiteName } = useAuth();
   const [authActor, setAuthActor] = useState(null);
   const [statuses, setStatuses] = useState([]);
   const [currentPassword, setCurrentPassword] = useState(null);
   const [newPassword, setNewPassword] = useState("");
+  const [newSiteName, setNewSiteName] = useState("");
   const [blockHours, setBlockHours] = useState({});
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
@@ -43,6 +44,24 @@ export default function Admin() {
   const flash = (msg) => {
     setMessage(msg);
     setTimeout(() => setMessage(null), 3000);
+  };
+
+  const handleSetSiteName = async (e) => {
+    e.preventDefault();
+    if (!authActor || !newSiteName.trim()) return;
+    setError(null);
+    try {
+      const ok = await authActor.setWebsiteName(newSiteName.trim());
+      if (ok) {
+        flash("Website name updated.");
+        setNewSiteName("");
+        await refreshWebsiteName();
+      } else {
+        setError("Could not update the website name.");
+      }
+    } catch (e) {
+      setError("Something went wrong. Please try again.");
+    }
   };
 
   const handleSetPassword = async (e) => {
@@ -134,6 +153,25 @@ export default function Admin() {
       <p className="page-subtitle">Family Hub controls — only you can see this.</p>
 
       {message && <div className="coin-toss-result" style={{ marginBottom: 16 }}>{message}</div>}
+
+      <div className="tree-admin-panel" style={{ marginBottom: 20 }}>
+        <h2 className="tree-admin-title">Website name</h2>
+        <p className="tree-rel" style={{ marginBottom: 10 }}>
+          Current name: <strong>{websiteName}</strong>
+        </p>
+        <form className="tree-admin-form" onSubmit={handleSetSiteName}>
+          <input
+            className="chat-text-input"
+            style={{ maxWidth: 260 }}
+            placeholder="New website name"
+            value={newSiteName}
+            onChange={(e) => setNewSiteName(e.target.value)}
+          />
+          <button className="chat-send-button" type="submit" disabled={!newSiteName.trim()}>
+            Change name
+          </button>
+        </form>
+      </div>
 
       <div className="tree-admin-panel" style={{ marginBottom: 20 }}>
         <h2 className="tree-admin-title">Signup password</h2>

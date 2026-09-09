@@ -17,6 +17,12 @@ import { createWallActor } from "../wall.js";
 import { ThumbsUpIcon, ThumbsDownIcon, HeartIcon } from "../components/ReactionIcons.jsx";
 import { useTopBarActions } from "../context/TopBarActionsContext.jsx";
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+import DailyLoveClaim from "../components/DailyLoveClaim.jsx";
+
 const IMAGE_TYPES = ["image/png", "image/jpeg"];
 
 export default function Profile() {
@@ -47,6 +53,9 @@ export default function Profile() {
   const [whatsapp, setWhatsapp] = useState("");
   const [email, setEmail] = useState("");
   const [description, setDescription] = useState("");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthDay, setBirthDay] = useState("");
+  const [ageInput, setAgeInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -158,6 +167,14 @@ export default function Profile() {
   }, [refreshWall]);
 
   useEffect(() => {
+    if (editing && profile) {
+      setBirthMonth(profile.birthdayMonth.length > 0 ? String(profile.birthdayMonth[0]) : "");
+      setBirthDay(profile.birthdayDay.length > 0 ? String(profile.birthdayDay[0]) : "");
+      setAgeInput(profile.age.length > 0 ? String(profile.age[0]) : "");
+    }
+  }, [editing, profile]);
+
+  useEffect(() => {
     if (!setAction) return;
     if (isSelf) {
       setAction(
@@ -260,6 +277,13 @@ export default function Profile() {
         textToOpt(email),
         textToOpt(description)
       );
+      const authActor = await createAuthActor(identity);
+      if (birthMonth && birthDay) {
+        await authActor.setBirthday(Number(birthMonth), Number(birthDay));
+      }
+      if (ageInput) {
+        await authActor.setAge(Number(ageInput));
+      }
       setEditing(false);
       await refresh();
     } catch (e2) {
@@ -400,6 +424,8 @@ export default function Profile() {
         {descText || ("admin" in person.role ? "Family Hub admin" : "Family member")}
       </p>
 
+      {isSelf && <DailyLoveClaim />}
+
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
         {!isSelf && (
           <Link to={"/dms/" + userId} className="chat-send-button" style={{ textDecoration: "none" }}>
@@ -431,6 +457,31 @@ export default function Profile() {
           <input className="chat-text-input" style={{ width: "100%", marginBottom: 10 }} value={email} onChange={(e) => setEmail(e.target.value)} />
           <label style={{ display: "block", marginBottom: 4, fontSize: 13, color: "#8a7860" }}>Description</label>
           <textarea className="chat-text-input" style={{ width: "100%", marginBottom: 10, minHeight: 80, resize: "vertical" }} value={description} onChange={(e) => setDescription(e.target.value)} />
+          <label style={{ display: "block", marginBottom: 4, fontSize: 13, color: "#8a7860" }}>Birthday</label>
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <select className="chat-text-input" value={birthMonth} onChange={(e) => setBirthMonth(e.target.value)}>
+              <option value="">Month</option>
+              {MONTH_NAMES.map((name, i) => (
+                <option key={i} value={i + 1}>{name}</option>
+              ))}
+            </select>
+            <select className="chat-text-input" value={birthDay} onChange={(e) => setBirthDay(e.target.value)}>
+              <option value="">Day</option>
+              {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+          <label style={{ display: "block", marginBottom: 4, fontSize: 13, color: "#8a7860" }}>Age (optional)</label>
+          <input
+            className="chat-text-input"
+            style={{ width: "100%", marginBottom: 10 }}
+            type="number"
+            min="0"
+            max="150"
+            value={ageInput}
+            onChange={(e) => setAgeInput(e.target.value)}
+          />
           <button className="chat-send-button" type="submit" disabled={saving}>
             {saving ? "Saving..." : "Save"}
           </button>
